@@ -14,8 +14,8 @@ var context;
 
 var MAX_ROWS = 22;
 var MAX_COLS = 10;
-// BUFFER_SIZE of the rows are invisible to the player 
 
+// BUFFER_SIZE of the rows are invisible to the player 
 var BUFFER_SIZE = 2;
 // Row,col of top left of board
 var start_pos = [0,0];
@@ -95,11 +95,13 @@ function nextTick() {
 }
 
 function moveActiveTetromino() {
-	if ((tick+1) % 45 == 0) {
-		drawPiece(current_piece, EMPTY_COLOR);
-		for (k in current_piece) {
-			current_piece[k] = [current_piece[k][0] + 1, current_piece[k][1]]
-		}
+	if ((tick+1) % 20 == 0) {
+		//drawPiece(current_piece, EMPTY_COLOR);
+		moveTetromino(1, 0);
+		//for (k in current_piece) {
+		//	
+		//	//current_piece[k] = [current_piece[k][0] + 1, current_piece[k][1]]
+		//}
 	}
 }
 
@@ -184,19 +186,34 @@ function colorCell(coords, color) {
 document.addEventListener('keydown', function(event) {
 	// LEFT
     if(event.keyCode == 37) {
-		drawPiece(current_piece, EMPTY_COLOR);
-		for (k in current_piece) {
-			current_piece[k] = [current_piece[k][0], current_piece[k][1] - 1]
-		}
+		//drawPiece(current_piece, EMPTY_COLOR);
+		moveTetromino(0, -1);
     }
 	// RIGHT
     else if(event.keyCode == 39) {
-		drawPiece(current_piece, EMPTY_COLOR);
-		for (k in current_piece) {
-			current_piece[k] = [current_piece[k][0], current_piece[k][1] + 1]
-		}
+		//drawPiece(current_piece, EMPTY_COLOR);
+		moveTetromino(0,1);
     }
 });
+
+function moveTetromino(roffset, coffset) {
+	var moved_piece = [];
+	
+	for (k in current_piece) {
+		var row = current_piece[k][0] + roffset;
+		var col = current_piece[k][1] + coffset;
+		if (col < 0 || col >= MAX_COLS) return;
+		if (row >= MAX_ROWS - BUFFER_SIZE) {
+			current_piece = null; 
+			return;
+		}
+		moved_piece[k] = [row, col];
+	}
+	// Remove current piece to redraw
+	// TODO: Optimize by keeping spaces that are removed then added?
+	drawPiece(current_piece, EMPTY_COLOR);
+	current_piece = moved_piece;
+}
 
 
 //function removeCell(row, col) {
