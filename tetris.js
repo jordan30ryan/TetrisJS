@@ -18,7 +18,7 @@ var MAX_COLS = 10;
 
 var BUFFER_SIZE = 2;
 // Row,col of top left of board
-var start_pos = [300, 1200];
+var start_pos = [0,0];
 
 // 2d array
 var play_field = [];
