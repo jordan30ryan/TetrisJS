@@ -17,6 +17,8 @@ var BUFFER_SIZE = 2;
 // Row,col of top left of board
 var start_pos = [0,0];
 
+var gameLoopId;
+
 var TETROMINOS = {
 	I: "#31C7EF", 
 	O: "#F7D308", 
@@ -31,7 +33,7 @@ var EMPTY_COLOR = "#FFFFFF";
 var GHOST_COLOR = "#CCCCCC";
 
 // Number of ticks before a piece moves down a row
-var FALL_RATE = 20;
+var FALL_RATE = 2;
 
 // 2d array representing the inactive pieces with the colors of every square
 var inactive_pieces = [];
@@ -69,7 +71,7 @@ window.onload = function() {
 }
 
 function play() {
-	setInterval(nextTick, TICK_DELAY);
+	gameLoopId = setInterval(nextTick, TICK_DELAY);
 }
 
 function nextTick() {
@@ -95,70 +97,45 @@ function moveActiveTetromino() {
 function spawnTetromino() {
 	current_piece.active = true;
 	// TODO: random bag system
-	//var rand = Math.floor(Math.random() * 7);
-	var rand = 1;
+	var rand = Math.floor(Math.random() * 7);
 	switch (rand) {
 		// Coordinates have the origin first
 		
 		case 0:
 			current_piece.coords = [[0,4], [0,5], [1,4], [1,5]];
+			current_piece.origin = [0.5, 4.5];
 			current_piece.type = TETROMINOS.O;
 			break;
 		case 1:
 			current_piece.coords = [[1,3],[1,4],[1,5],[1,6]];
+			current_piece.origin = [1.5, 4.5];
 			current_piece.type = TETROMINOS.I;
 			break;
 		case 2:
 			current_piece.coords = [[1,4],[0,4],[1,3],[1,5]];
+			current_piece.origin = [1,4];
 			current_piece.type = TETROMINOS.T;
 			break;
 		case 3:
 			current_piece.coords = [[1,4],[0,4],[0,5],[1,3]];
+			current_piece.origin = [1,4];
 			current_piece.type = TETROMINOS.S;
 			break;
 		case 4:
 			current_piece.coords = [[1,4],[0,3],[0,4],[1,5]];
+			current_piece.origin = [1,4];
 			current_piece.type = TETROMINOS.Z;
 			break;
 		case 5:
 			current_piece.coords = [[1,4],[0,3],[1,3],[1,5]];
+			current_piece.origin = [1,4];
 			current_piece.type = TETROMINOS.J;
 			break;
 		case 6:
 			current_piece.coords = [[1,4],[0,5],[1,3],[1,5]];
+			current_piece.origin = [1,4];
 			current_piece.type = TETROMINOS.L;
 			break;
-		
-		
-		
-		//case 0:
-		//	current_piece = [[0,4], [0,5], [1,4], [1,5]];
-		//	current_piece_type = TETROMINOS.O;
-		//	break;
-		//case 1:
-		//	current_piece = [[1,3],[1,4],[1,5],[1,6]];
-		//	current_piece_type = TETROMINOS.I;
-		//	break;
-		//case 2:
-		//	current_piece = [[1,4],[0,4],[1,3],[1,5]];
-		//	current_piece_type = TETROMINOS.T;
-		//	break;
-		//case 3:
-		//	current_piece = [[1,4],[0,4],[0,5],[1,3]];
-		//	current_piece_type = TETROMINOS.S;
-		//	break;
-		//case 4:
-		//	current_piece = [[1,4],[0,3],[0,4],[1,5]];
-		//	current_piece_type = TETROMINOS.Z;
-		//	break;
-		//case 5:
-		//	current_piece = [[1,4],[0,3],[1,3],[1,5]];
-		//	current_piece_type = TETROMINOS.J;
-		//	break;
-		//case 6:
-		//	current_piece = [[1,4],[0,5],[1,3],[1,5]];
-		//	current_piece_type = TETROMINOS.L;
-		//	break;
 	}
 }
 
@@ -188,7 +165,7 @@ document.addEventListener('keydown', function(event) {
 
 function rotateLeft() {
 	if (current_piece.type == TETROMINOS.O) return;
-	var origin = current_piece.coords[0];
+	var origin = current_piece.origin;
 
 	var moved_piece = [];
 	for (var k in current_piece.coords) {
@@ -221,9 +198,9 @@ function rotateLeft() {
 
 function rotateRight() {
 	if (current_piece.type == TETROMINOS.O) return;
-	
+	var origin = current_piece.origin;
+
 	var moved_piece = [];
-	var origin = current_piece.coords[0];
 	for (var k in current_piece.coords) {
 		var temp = []
 		temp[0] = current_piece.coords[k][0] - origin[0];
@@ -280,6 +257,8 @@ function moveTetromino(roffset, coffset) {
 		
 		moved_piece[k] = [row, col];
 	}
+	current_piece.origin[0] += roffset;
+	current_piece.origin[1] += coffset;
 	// Remove current piece to redraw
 	// TODO: Optimize by keeping spaces that are removed then added?
 	drawPiece(EMPTY_COLOR);
@@ -294,11 +273,21 @@ function hardDrop() {
 
 // Makes current piece inactive
 function deactivatePiece() {
+	var game_over = true;
 	for (k in current_piece.coords) {
 		inactive_pieces[current_piece.coords[k][0]][current_piece.coords[k][1]] = current_piece.type;
+		// Ensure piece visibility
 		drawPiece(current_piece.type);
+		// Game is only ended if the piece is deactivated 
+		//	above the buffer; that is, no cells of the piece
+		//	are below the buffer
+		if (current_piece.coords[k][0] >= BUFFER_SIZE) game_over = false;
 	}
 	current_piece.active = false;
+	if (game_over) {
+		clearInterval(gameLoopId);
+		alert("Game Over");
+	}
 }
 
 
@@ -308,7 +297,6 @@ function drawPiece(color) {
 	for (k in current_piece.coords) {
 		colorCell(current_piece.coords[k], color);
 	}
-	//colorCell(current_piece_ghost[k], GHOST_COLOR);
 }
 
 function colorCell(coords, color) {
