@@ -5,11 +5,11 @@ https://jordan-ross.github.io/TetrisJS/
 - Line clearing
 - Random bag system
 - Next piece preview
+- Ghost Piece
 - Hard Drop
 - Soft Drop
 - Wall kicks
 - Hold Piece
-- Top out - "When a piece is spawned overlapping at least one block"
 
 ## Reference 
 https://tetris.wiki/Tetris_Guideline
