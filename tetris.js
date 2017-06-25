@@ -29,11 +29,12 @@ var TETROMINOS = {
 	L: "#EF7921"
 };
 
-var EMPTY_COLOR = "#FFFFFF";
+
+var EMPTY = "#FFFFFF"
 var GHOST_COLOR = "#CCCCCC";
 
 // Number of ticks before a piece moves down a row
-var FALL_RATE = 10;
+var FALL_RATE = 7;
 
 // 2d array representing the inactive pieces with the colors of every square
 var inactive_pieces = [];
@@ -41,9 +42,10 @@ var inactive_pieces = [];
 var current_piece = {
 	active: false,
 	coords: [],
-	type: EMPTY_COLOR
+    ghost_coords: [],
+	type: EMPTY
 }
-var current_piece_ghost = null;
+//var current_piece_ghost = null;
 
 
 window.onload = function() {
@@ -58,7 +60,7 @@ window.onload = function() {
 	for (var r = 0; r < MAX_ROWS; r++) {
 		var temparray = [];
 		for (var c = 0; c < MAX_COLS; c++) {
-			temparray[c] = EMPTY_COLOR;
+			temparray[c] = EMPTY;
 		}
 		inactive_pieces.push(temparray);
 	}
@@ -80,11 +82,41 @@ function nextTick() {
 	else {		
 		spawnTetromino();
 	}
-	// Calculate ghost position
-	//for (k in current_piece) {
-	//	
-	//}
-	drawPiece(current_piece.type);
+
+    calculateCurrentPieceGhost();
+
+	if (current_piece.active) { 
+        drawPiece(); 
+    }
+}
+
+// Calculate ghost position
+function calculateCurrentPieceGhost() {
+    // Largest downward shift the current piece can make without moving 
+    var largest_shift = MAX_ROWS;
+    // Calculate the largest shift
+	for (var cell in current_piece.coords) {
+        var highest_available_position = MAX_ROWS - 1;
+        for (var row = highest_available_position; row > 0; row--) {
+            if (inactive_pieces[row][current_piece.coords[cell][1]] != EMPTY) {
+                highest_available_position = row - 1;
+            }
+        }
+        var shift = highest_available_position - current_piece.coords[cell][0];
+        if (shift < largest_shift) largest_shift = shift;
+	}
+    // Apply largest shift to the current coords and set those as the ghost coords
+    current_piece.ghost_coords = [];
+    for (cell in current_piece.coords) {
+        current_piece.ghost_coords.push([current_piece.coords[cell][0] + largest_shift,
+                                        current_piece.coords[cell][1]]);
+    }
+}
+
+function hardDrop() {
+	// TODO
+    clearPiece();
+    current_piece.coords = current_piece.ghost_coords;
 }
 
 function moveActiveTetromino() {
@@ -162,7 +194,6 @@ document.addEventListener('keydown', function(event) {
 	}
 });
 
-
 function rotateLeft() {
 	if (current_piece.type == TETROMINOS.O) return;
 	var origin = current_piece.origin;
@@ -183,7 +214,7 @@ function rotateLeft() {
 			// Rotation would colide with walls
 			return;
 		}
-		if (inactive_pieces[row][col] != EMPTY_COLOR) {
+		if (inactive_pieces[row][col] != EMPTY) {
 			// Rotation would collide with inactive piece
 			return;
 		}
@@ -192,7 +223,7 @@ function rotateLeft() {
 	
 	// Remove current piece to redraw
 	// TODO: Optimize by keeping spaces that are removed then added?
-	drawPiece(EMPTY_COLOR);
+	clearPiece();
 	current_piece.coords = moved_piece;
 }
 
@@ -216,7 +247,7 @@ function rotateRight() {
 			// Rotation would colide with walls
 			return;
 		}
-		if (inactive_pieces[row][col] != EMPTY_COLOR) {
+		if (inactive_pieces[row][col] != EMPTY) {
 			// Rotation would collide with inactive piece
 			return;
 		}
@@ -225,7 +256,7 @@ function rotateRight() {
 	
 	// Remove current piece to redraw
 	// TODO: Optimize by keeping spaces that are removed then added?
-	drawPiece(EMPTY_COLOR);
+	clearPiece();
 	current_piece.coords = moved_piece;
 }
 
@@ -247,7 +278,7 @@ function moveTetromino(roffset, coffset) {
 			deactivatePiece();
 			return;
 		}
-		if (inactive_pieces[row][col] != EMPTY_COLOR) {
+		if (inactive_pieces[row][col] != EMPTY) {
 			// Current piece collides with inactive piece to the side
 			if (roffset == 0) return;
 			// Current piece collides with inactive piece below
@@ -261,28 +292,32 @@ function moveTetromino(roffset, coffset) {
 	current_piece.origin[1] += coffset;
 	// Remove current piece to redraw
 	// TODO: Optimize by keeping spaces that are removed then added?
-	drawPiece(EMPTY_COLOR);
+	clearPiece();
 
 	current_piece.coords = moved_piece;
-}
-
-function hardDrop() {
-	// TODO
-	
 }
 
 // Makes current piece inactive
 function deactivatePiece() {
 	var game_over = true;
-	for (k in current_piece.coords) {
+	// Array of unique row numbers that the resting spot of the 
+	//	piece will occupy
+	var unique_rows = [];
+	for (var k in current_piece.coords) {
 		inactive_pieces[current_piece.coords[k][0]][current_piece.coords[k][1]] = current_piece.type;
 		// Ensure piece visibility
-		drawPiece(current_piece.type);
+		drawPiece();
 		// Game is only ended if the piece is deactivated 
 		//	above the buffer; that is, no cells of the piece
 		//	are below the buffer
 		if (current_piece.coords[k][0] >= BUFFER_SIZE) game_over = false;
+		if (!unique_rows.includes(current_piece.coords[k][0])) {
+			unique_rows.push(current_piece.coords[k][0]);
+		}
 	}
+	
+	checkRows(unique_rows);
+
 	current_piece.active = false;
 	if (game_over) {
 		clearInterval(gameLoopId);
@@ -290,12 +325,70 @@ function deactivatePiece() {
 	}
 }
 
+// TODO: Optimize row clearing
+// Check for cleared rows
+function checkRows(unique_rows) {
+	for (var r in unique_rows) {
+		var row = unique_rows[r];
+		var row_cleared = true;
+		for (var c = 0; c < MAX_COLS; c++) {
+			if (inactive_pieces[row][c] == EMPTY) {
+				row_cleared = false;
+				break;
+			}
+		}
+		if (row_cleared) {
+			clearRow(row);
+		}
+	}
+}
+
+function clearRow(cleared_row) {
+	console.log("clearing row" + cleared_row);
+	for (var col = 0; col < MAX_COLS; col++) {
+		inactive_pieces[cleared_row][col] = EMPTY;
+		clearCell([cleared_row, col]);
+	}
+	
+	// Iterate up the rows that get shifted down
+	for (var row = cleared_row; row > 1; row--) {
+		for (var col = 0; col < MAX_COLS; col++) {
+			inactive_pieces[row][col] = inactive_pieces[row-1][col];
+			if (inactive_pieces[row][col] == EMPTY) {
+				clearCell([row, col]);
+			} else {
+				colorCell([row, col], inactive_pieces[row][col]);
+			}
+		}
+	}
+}
+
 
 // Canvas functions
 
-function drawPiece(color) {
-	for (k in current_piece.coords) {
-		colorCell(current_piece.coords[k], color);
+function drawPiece() {
+    drawGhostPiece();
+	for (cell in current_piece.coords) {
+		colorCell(current_piece.coords[cell], current_piece.type);
+	}
+}
+
+function drawGhostPiece() {
+	for (cell in current_piece.ghost_coords) {
+		colorCell(current_piece.ghost_coords[cell], GHOST_COLOR);
+	}
+}
+
+function clearPiece() {
+	for (cell in current_piece.coords) {
+		clearCell(current_piece.coords[cell]);
+	}
+    clearGhostPiece();
+}
+
+function clearGhostPiece() {
+    for (cell in current_piece.ghost_coords) {
+		clearCell(current_piece.ghost_coords[cell]);
 	}
 }
 
@@ -308,6 +401,13 @@ function colorCell(coords, color) {
 	context.fillRect(startCol, startRow, GRID_PIXEL_SIZE - 2, GRID_PIXEL_SIZE - 2);
 }
 
+function clearCell(coords) {
+	var rowCoord = coords[0] - BUFFER_SIZE;
+	if (rowCoord < 0) return; // Don't draw if in buffer zone
+	var startRow = rowCoord * GRID_PIXEL_SIZE + start_pos[0] + 1; 
+	var startCol = coords[1] * GRID_PIXEL_SIZE + start_pos[1] + 1;
+	context.clearRect(startCol, startRow, GRID_PIXEL_SIZE - 2, GRID_PIXEL_SIZE - 2);
+}
 
 function drawGrid() {
 	var rowCount = 0;
@@ -336,3 +436,4 @@ function drawGrid() {
 	context.strokeStyle = "#BBBBBB";
 	context.stroke();
 }
+
