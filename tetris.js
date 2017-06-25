@@ -34,19 +34,24 @@ var EMPTY = "#FFFFFF"
 var GHOST_COLOR = "#CCCCCC";
 
 // Number of ticks before a piece moves down a row
-var FALL_RATE = 7;
+var FALL_RATE = 30;
 
 // 2d array representing the inactive pieces with the colors of every square
 var inactive_pieces = [];
 
 var current_piece = {
 	active: false,
+    clearing: false,
 	coords: [],
     ghost_coords: [],
 	type: EMPTY
 }
-//var current_piece_ghost = null;
 
+var cleared_rows = [];
+// The tick at which the next clear will happen
+var next_clear_tick = -1;
+// The number of ticks between a line clear and the visual movement
+var CLEAR_TICK_DELAY = 10;
 
 window.onload = function() {
 	canvas = document.getElementById("game");
@@ -72,13 +77,48 @@ window.onload = function() {
 	play();
 }
 
+document.addEventListener('keydown', function(event) {
+    // block input if in the middle of clearing 
+    if (current_piece.clearing) return;
+	// UP
+	if(event.keyCode == 38) {
+		hardDrop();
+	}
+	// LEFT
+	if(event.keyCode == 37) {
+		moveTetromino(0, -1);
+	}
+	// RIGHT
+	else if(event.keyCode == 39) {
+		moveTetromino(0,1);
+	}
+	// ROTATE L
+	else if (event.keyCode == 90) {
+		rotateLeft();
+	}
+	// ROTATE R
+	else if (event.keyCode == 88) {
+		rotateRight();
+	}
+});
+
 function play() {
 	gameLoopId = setInterval(nextTick, TICK_DELAY);
 }
 
 function nextTick() {
 	tick++;
-	if (current_piece.active) moveActiveTetromino();
+    if (tick == next_clear_tick) {
+        moveDownRows();
+        current_piece.clearing = false;
+    }
+    // If rows are being cleared
+    else if (current_piece.clearing) {
+        return;
+    }
+	else if (current_piece.active) {
+        moveActiveTetromino();
+    }
 	else {		
 		spawnTetromino();
 	}
@@ -97,7 +137,7 @@ function calculateCurrentPieceGhost() {
     // Calculate the largest shift
 	for (var cell in current_piece.coords) {
         var highest_available_position = MAX_ROWS - 1;
-        for (var row = highest_available_position; row > 0; row--) {
+        for (var row = highest_available_position; row > current_piece.coords[cell][0]; row--) {
             if (inactive_pieces[row][current_piece.coords[cell][1]] != EMPTY) {
                 highest_available_position = row - 1;
             }
@@ -114,9 +154,9 @@ function calculateCurrentPieceGhost() {
 }
 
 function hardDrop() {
-	// TODO
     clearPiece();
     current_piece.coords = current_piece.ghost_coords;
+    deactivatePiece();
 }
 
 function moveActiveTetromino() {
@@ -170,29 +210,6 @@ function spawnTetromino() {
 			break;
 	}
 }
-
-document.addEventListener('keydown', function(event) {
-	// UP
-	if(event.keyCode == 38) {
-		hardDrop();
-	}
-	// LEFT
-	if(event.keyCode == 37) {
-		moveTetromino(0, -1);
-	}
-	// RIGHT
-	else if(event.keyCode == 39) {
-		moveTetromino(0,1);
-	}
-	// ROTATE L
-	else if (event.keyCode == 90) {
-		rotateLeft();
-	}
-	// ROTATE R
-	else if (event.keyCode == 88) {
-		rotateRight();
-	}
-});
 
 function rotateLeft() {
 	if (current_piece.type == TETROMINOS.O) return;
@@ -316,9 +333,10 @@ function deactivatePiece() {
 		}
 	}
 	
+	current_piece.active = false;
+
 	checkRows(unique_rows);
 
-	current_piece.active = false;
 	if (game_over) {
 		clearInterval(gameLoopId);
 		alert("Game Over");
@@ -328,19 +346,46 @@ function deactivatePiece() {
 // TODO: Optimize row clearing
 // Check for cleared rows
 function checkRows(unique_rows) {
+    unique_rows.sort();
+    cleared_rows = [];
 	for (var r in unique_rows) {
 		var row = unique_rows[r];
 		var row_cleared = true;
 		for (var c = 0; c < MAX_COLS; c++) {
 			if (inactive_pieces[row][c] == EMPTY) {
+                console.log("row " + row + " not cleared, col " + c + " empty");
 				row_cleared = false;
 				break;
 			}
 		}
 		if (row_cleared) {
+            cleared_rows.push(row);
 			clearRow(row);
 		}
 	}
+    if (cleared_rows.length > 0) {
+        current_piece.clearing = true; 
+        next_clear_tick = tick + CLEAR_TICK_DELAY;
+    }
+}
+
+// Uses global variable cleared_rows and pushes down
+//  the blocks above those rows.
+function moveDownRows() {
+    for (var r in cleared_rows) {
+        var cleared_row = cleared_rows[r];
+        // Iterate up the rows that get shifted down
+	    for (var row = cleared_row; row > 1; row--) {
+	    	for (var col = 0; col < MAX_COLS; col++) {
+	    		inactive_pieces[row][col] = inactive_pieces[row-1][col];
+	    		if (inactive_pieces[row][col] == EMPTY) {
+	    			clearCell([row, col]);
+	    		} else {
+	    			colorCell([row, col], inactive_pieces[row][col]);
+	    		}
+	    	}
+	    }
+    }
 }
 
 function clearRow(cleared_row) {
@@ -349,22 +394,11 @@ function clearRow(cleared_row) {
 		inactive_pieces[cleared_row][col] = EMPTY;
 		clearCell([cleared_row, col]);
 	}
-	
-	// Iterate up the rows that get shifted down
-	for (var row = cleared_row; row > 1; row--) {
-		for (var col = 0; col < MAX_COLS; col++) {
-			inactive_pieces[row][col] = inactive_pieces[row-1][col];
-			if (inactive_pieces[row][col] == EMPTY) {
-				clearCell([row, col]);
-			} else {
-				colorCell([row, col], inactive_pieces[row][col]);
-			}
-		}
-	}
 }
 
 
 // Canvas functions
+
 
 function drawPiece() {
     drawGhostPiece();
