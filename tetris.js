@@ -1,11 +1,4 @@
-var GRID_PIXEL_SIZE = 40;
-var WINDOW_PADDING = 20;
-
-// Time in ms between each tick 
-// 16ms - 60Hz
-var TICK_DELAY = 16;
-var tick = 0;
-
+/*Canvas Variables------------------------------------------------------------*/
 var canvas;
 var context;
 
@@ -16,6 +9,18 @@ var MAX_COLS = 10;
 var BUFFER_SIZE = 2;
 // Row,col of top left of board
 var start_pos = [0,0];
+
+var boardHeight = start_pos[0] + GRID_PIXEL_SIZE * (MAX_ROWS - BUFFER_SIZE);
+var boardWidth = start_pos[1] + GRID_PIXEL_SIZE * MAX_COLS;
+var GRID_PIXEL_SIZE = 40;
+var WINDOW_PADDING = 20;
+
+/*Game Variables--------------------------------------------------------------*/
+
+// Time in ms between each tick 
+// 16ms - 60Hz
+var TICK_DELAY = 16;
+var tick = 0;
 
 var gameLoopId;
 
@@ -28,7 +33,6 @@ var TETROMINOS = {
 	J: "#5A65AD", 
 	L: "#EF7921"
 };
-
 
 var EMPTY = "#FFFFFF"
 var GHOST_COLOR = "#CCCCCC";
@@ -43,15 +47,22 @@ var current_piece = {
 	active: false,
     clearing: false,
 	coords: [],
+    origin: [],
     ghost_coords: [],
-	type: EMPTY
+	type: EMPTY,
 }
 
+// Array of rows that were previously cleared
 var cleared_rows = [];
 // The tick at which the next clear will happen
 var next_clear_tick = -1;
 // The number of ticks between a line clear and the visual movement
 var CLEAR_TICK_DELAY = 10;
+
+var next_piece_index = -1;
+var next_piece_coords = [];
+
+/*Page Functions--------------------------------------------------------------*/
 
 window.onload = function() {
 	canvas = document.getElementById("game");
@@ -73,6 +84,7 @@ window.onload = function() {
 	context = canvas.getContext("2d");
 	
 	drawGrid();
+    drawSidePanels();
 	
 	play();
 }
@@ -102,6 +114,8 @@ document.addEventListener('keydown', function(event) {
 	}
 });
 
+/*Game Functions--------------------------------------------------------------*/
+
 function play() {
 	gameLoopId = setInterval(nextTick, TICK_DELAY);
 }
@@ -126,7 +140,7 @@ function nextTick() {
     calculateCurrentPieceGhost();
 
 	if (current_piece.active) { 
-        drawPiece(); 
+        drawCurrentPiece(); 
     }
 }
 
@@ -154,7 +168,7 @@ function calculateCurrentPieceGhost() {
 }
 
 function hardDrop() {
-    clearPiece();
+    clearCurrentPiece();
     current_piece.coords = current_piece.ghost_coords;
     deactivatePiece();
 }
@@ -169,10 +183,51 @@ function moveActiveTetromino() {
 function spawnTetromino() {
 	current_piece.active = true;
 	// TODO: random bag system
-	var rand = Math.floor(Math.random() * 7);
-	switch (rand) {
-		// Coordinates have the origin first
-		
+    var this_piece_index;
+    // If there is no next piece yet
+    if (next_piece_index == -1) {
+        this_piece_index = Math.floor(Math.random() * 7);
+        next_piece_index = Math.floor(Math.random() * 7);
+    } 
+    else {
+        this_piece_index = next_piece_index;
+        next_piece_index = Math.floor(Math.random() * 7);
+    }
+    // TODO: do this differently?
+    if (next_piece_coords.length > 0) {
+        clearPiece(next_piece_coords);
+    }
+    switch (next_piece_index) {
+		case 0:
+            next_piece_coords = [[2,11],[2,12],[3,11],[3,12]];
+            drawPiece(next_piece_coords, TETROMINOS.O);
+			break;
+		case 1:
+            next_piece_coords = [[3,10],[3,11],[3,12],[3,13]];
+            drawPiece(next_piece_coords, TETROMINOS.I);
+			break;
+		case 2:
+            next_piece_coords = [[3,10],[3,11],[3,12],[2,11]];
+            drawPiece(next_piece_coords, TETROMINOS.T);
+			break;
+		case 3:
+            next_piece_coords = [[3,11],[2,11],[2,12],[3,10]];
+            drawPiece(next_piece_coords, TETROMINOS.S);
+			break;
+		case 4:
+            next_piece_coords = [[3,11],[2,10],[2,11],[3,12]];
+            drawPiece(next_piece_coords, TETROMINOS.Z);
+			break;
+		case 5:
+            next_piece_coords = [[3,11],[2,10],[3,10],[3,12]];
+            drawPiece(next_piece_coords, TETROMINOS.J);
+			break;
+		case 6:
+            next_piece_coords = [[3,11],[2,12],[3,10],[3,12]];
+            drawPiece(next_piece_coords, TETROMINOS.L);
+			break;
+	}
+	switch (this_piece_index) {
 		case 0:
 			current_piece.coords = [[0,4], [0,5], [1,4], [1,5]];
 			current_piece.origin = [0.5, 4.5];
@@ -240,7 +295,7 @@ function rotateLeft() {
 	
 	// Remove current piece to redraw
 	// TODO: Optimize by keeping spaces that are removed then added?
-	clearPiece();
+	clearCurrentPiece();
 	current_piece.coords = moved_piece;
 }
 
@@ -273,7 +328,7 @@ function rotateRight() {
 	
 	// Remove current piece to redraw
 	// TODO: Optimize by keeping spaces that are removed then added?
-	clearPiece();
+	clearCurrentPiece();
 	current_piece.coords = moved_piece;
 }
 
@@ -309,7 +364,7 @@ function moveTetromino(roffset, coffset) {
 	current_piece.origin[1] += coffset;
 	// Remove current piece to redraw
 	// TODO: Optimize by keeping spaces that are removed then added?
-	clearPiece();
+	clearCurrentPiece();
 
 	current_piece.coords = moved_piece;
 }
@@ -323,7 +378,7 @@ function deactivatePiece() {
 	for (var k in current_piece.coords) {
 		inactive_pieces[current_piece.coords[k][0]][current_piece.coords[k][1]] = current_piece.type;
 		// Ensure piece visibility
-		drawPiece();
+		drawCurrentPiece();
 		// Game is only ended if the piece is deactivated 
 		//	above the buffer; that is, no cells of the piece
 		//	are below the buffer
@@ -396,38 +451,36 @@ function clearRow(cleared_row) {
 	}
 }
 
+/*Canvas functions------------------------------------------------------------*/
 
-// Canvas functions
 
-
-function drawPiece() {
-    drawGhostPiece();
-	for (cell in current_piece.coords) {
-		colorCell(current_piece.coords[cell], current_piece.type);
+function drawPiece(coords, type) {
+    for (cell in coords) {
+		colorCell(coords[cell], type);
 	}
 }
 
-function drawGhostPiece() {
-	for (cell in current_piece.ghost_coords) {
-		colorCell(current_piece.ghost_coords[cell], GHOST_COLOR);
+function clearPiece(coords) {
+	for (cell in coords) {
+		clearCell(coords[cell]);
 	}
 }
 
-function clearPiece() {
-	for (cell in current_piece.coords) {
-		clearCell(current_piece.coords[cell]);
-	}
-    clearGhostPiece();
+function drawCurrentPiece() {
+    // Draw ghost first, then draw current piece on top
+    drawPiece(current_piece.ghost_coords, GHOST_COLOR);
+    drawPiece(current_piece.coords, current_piece.type);
 }
 
-function clearGhostPiece() {
-    for (cell in current_piece.ghost_coords) {
-		clearCell(current_piece.ghost_coords[cell]);
-	}
+function clearCurrentPiece() {
+    clearPiece(current_piece.coords);
+    clearPiece(current_piece.ghost_coords);
 }
 
 function colorCell(coords, color) {
 	context.fillStyle = color;
+    context.strokeStyle = color;
+
 	var rowCoord = coords[0] - BUFFER_SIZE;
 	if (rowCoord < 0) return; // Don't draw if in buffer zone
 	var startRow = rowCoord * GRID_PIXEL_SIZE + start_pos[0] + 1; 
@@ -446,9 +499,9 @@ function clearCell(coords) {
 function drawGrid() {
 	var rowCount = 0;
 	var colCount = 0;
-	var boardHeight = start_pos[0] + GRID_PIXEL_SIZE * (MAX_ROWS - BUFFER_SIZE);
-	var boardWidth = start_pos[1] + GRID_PIXEL_SIZE * MAX_COLS;
-	
+    boardHeight = start_pos[0] + GRID_PIXEL_SIZE * (MAX_ROWS - BUFFER_SIZE);
+    boardWidth = start_pos[1] + GRID_PIXEL_SIZE * MAX_COLS;
+
 	// Draw horizontals
 	for (var pixrow = start_pos[0]; 
 			rowCount <= MAX_ROWS - BUFFER_SIZE; 
@@ -462,12 +515,23 @@ function drawGrid() {
 	for (var pixcol = start_pos[1]; 
 			colCount <= MAX_COLS; 
 			pixcol += GRID_PIXEL_SIZE, colCount++) {
-				
 		context.moveTo(pixcol, start_pos[0]);
 		context.lineTo(pixcol, boardHeight);
 	}
 	
+    // TODO: format the UI color
 	context.strokeStyle = "#BBBBBB";
 	context.stroke();
+}
+
+function drawSidePanels() {
+    // Start drawing a new path as to not overwrite old path
+    context.beginPath();
+    startPointX= boardWidth;
+    startPointY = start_pos[0];
+    context.rect(startPointX, startPointY, GRID_PIXEL_SIZE * 4, GRID_PIXEL_SIZE * 4);
+    // TODO: UI color
+    context.strokeStyle="#BBBBBB";
+    context.stroke();
 }
 
