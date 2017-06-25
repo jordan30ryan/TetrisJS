@@ -141,17 +141,17 @@ function spawnTetromino() {
 
 document.addEventListener('keydown', function(event) {
 	// UP
-    if(event.keyCode == 38) {
+	if(event.keyCode == 38) {
 		hardDrop();
-    }
+	}
 	// LEFT
-    if(event.keyCode == 37) {
+	if(event.keyCode == 37) {
 		moveTetromino(0, -1);
-    }
+	}
 	// RIGHT
-    else if(event.keyCode == 39) {
+	else if(event.keyCode == 39) {
 		moveTetromino(0,1);
-    }
+	}
 	// ROTATE L
 	else if (event.keyCode == 90) {
 		rotateLeft();
