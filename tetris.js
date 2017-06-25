@@ -33,7 +33,7 @@ var EMPTY_COLOR = "#FFFFFF";
 var GHOST_COLOR = "#CCCCCC";
 
 // Number of ticks before a piece moves down a row
-var FALL_RATE = 2;
+var FALL_RATE = 10;
 
 // 2d array representing the inactive pieces with the colors of every square
 var inactive_pieces = [];
