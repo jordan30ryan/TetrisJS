@@ -1,67 +1,78 @@
 /*Canvas Variables------------------------------------------------------------*/
-var canvas;
-var context;
+let canvas;
+let context;
 
-var MAX_ROWS = 22;
-var MAX_COLS = 10;
+let MAX_ROWS = 22;
+let MAX_COLS = 10;
 
 // BUFFER_SIZE of the rows are invisible to the player 
-var BUFFER_SIZE = 2;
+let BUFFER_SIZE = 2;
 // Row,col of top left of board
-var start_pos = [0,0];
+let start_pos = [0,0];
 
-var boardHeight = start_pos[0] + GRID_PIXEL_SIZE * (MAX_ROWS - BUFFER_SIZE);
-var boardWidth = start_pos[1] + GRID_PIXEL_SIZE * MAX_COLS;
-var GRID_PIXEL_SIZE = 40;
-var WINDOW_PADDING = 20;
+let GRID_PIXEL_SIZE = 40;
+let WINDOW_PADDING = 20;
+let boardHeight = start_pos[0] + GRID_PIXEL_SIZE * (MAX_ROWS - BUFFER_SIZE);
+let boardWidth = start_pos[1] + GRID_PIXEL_SIZE * MAX_COLS;
 
 /*Game Variables--------------------------------------------------------------*/
 
 // Time in ms between each tick 
 // 16ms - 60Hz
-var TICK_DELAY = 16;
-var tick = 0;
+const TICK_DELAY = 16;
+let tick = 0;
 
-var gameLoopId;
+let gameLoopId;
 
-var TETROMINOS = {
-I: "#31C7EF", 
-   O: "#F7D308", 
-   T: "#AD4D9C", 
-   S: "#42B642", 
-   Z: "#EF2029", 
-   J: "#5A65AD", 
-   L: "#EF7921"
-};
+// coords - where to spawn a new piece
+// origin - coordinates about which the piece rotates
+// next_coords - where to draw the piece when it's in the next piece box
+const TETROMINOES = [
+    {name: "I", color: "#31C7EF", coords: [[1,3],[1,4],[1,5],[1,6]], 
+        origin: [1.5, 4.5], next_coords: [[3,10],[3,11],[3,12],[3,13]]},
+    {name: "O", color: "#F7D308", coords: [[0,4],[0,5],[1,4],[1,5]], 
+        origin: [0.5, 4.5], next_coords: [[2,11],[2,12],[3,11],[3,12]]},
+    {name: "T", color: "#AD4D9C", coords: [[1,4],[0,4],[1,3],[1,5]], 
+        origin: [1,4], next_coords: [[3,10],[3,11],[3,12],[2,11]]},
+    {name: "S", color: "#42B642", coords: [[1,4],[0,4],[0,5],[1,3]], 
+        origin: [1,4], next_coords: [[3,11],[2,11],[2,12],[3,10]]}, 
+    {name: "Z", color: "#EF2029", coords: [[1,4],[0,3],[0,4],[1,5]], 
+        origin: [1,4], next_coords: [[3,11],[2,10],[2,11],[3,12]]},
+    {name: "J", color: "#5A65AD", coords: [[1,4],[0,3],[1,3],[1,5]], 
+        origin: [1,4], next_coords: [[3,11],[2,10],[3,10],[3,12]]},
+    {name: "L", color: "#EF7921", coords: [[1,4],[0,5],[1,3],[1,5]], 
+        origin: [1,4], next_coords: [[3,11],[2,12],[3,10],[3,12]]}
+];
 
-var EMPTY = "#FFFFFF"
-var GHOST_COLOR = "#CCCCCC";
+const EMPTY = "#FFFFFF"
+const GHOST_COLOR = "#CCCCCC";
 
 // Number of ticks before a piece moves down a row
-var FALL_RATE = 30;
+let FALL_RATE = 30;
 
 // 2d array representing the inactive pieces with the colors of every square
-var inactive_pieces = [];
+let inactive_pieces = [];
 
-var current_piece = {
+let current_piece = {
+    name: "",
     active: false,
     clearing: false,
     coords: [],
     has_moved: false,
     origin: [],
     ghost_coords: [],
-    type: EMPTY,
+    color: EMPTY,
 }
 
 // Array of rows that were previously cleared
-var cleared_rows = [];
+let cleared_rows = [];
 // The tick at which the next clear will happen
-var next_clear_tick = -1;
+let next_clear_tick = -1;
 // The number of ticks between a line clear and the visual movement
-var CLEAR_TICK_DELAY = 10;
+let CLEAR_TICK_DELAY = 10;
 
-var next_piece_index = -1;
-var next_piece_coords = [];
+// Bag of pieces to be used
+let piece_bag = [];
 
 /*Page Functions--------------------------------------------------------------*/
 
@@ -74,9 +85,9 @@ window.onload = function() {
     //start_pos[1] = canvas.width / 2;
 
     //Setup inactive piece array
-    for (var r = 0; r < MAX_ROWS; r++) {
-        var temparray = [];
-        for (var c = 0; c < MAX_COLS; c++) {
+    for (let r = 0; r < MAX_ROWS; r++) {
+        let temparray = [];
+        for (let c = 0; c < MAX_COLS; c++) {
             temparray[c] = EMPTY;
         }
         inactive_pieces.push(temparray);
@@ -151,16 +162,16 @@ function nextTick() {
 // Calculate ghost position
 function calculateCurrentPieceGhost() {
     // Largest downward shift the current piece can make without moving 
-    var largest_shift = MAX_ROWS;
+    let largest_shift = MAX_ROWS;
     // Calculate the largest shift
-    for (var cell in current_piece.coords) {
-        var highest_available_position = MAX_ROWS - 1;
-        for (var row = highest_available_position; row > current_piece.coords[cell][0]; row--) {
+    for (let cell in current_piece.coords) {
+        let highest_available_position = MAX_ROWS - 1;
+        for (let row = highest_available_position; row > current_piece.coords[cell][0]; row--) {
             if (inactive_pieces[row][current_piece.coords[cell][1]] != EMPTY) {
                 highest_available_position = row - 1;
             }
         }
-        var shift = highest_available_position - current_piece.coords[cell][0];
+        let shift = highest_available_position - current_piece.coords[cell][0];
         if (shift < largest_shift) largest_shift = shift;
     }
     // Apply largest shift to the current coords and set those as the ghost coords
@@ -185,106 +196,65 @@ function moveActiveTetromino() {
 }
 
 function spawnTetromino() {
-    current_piece.active = true;
-    // TODO: random bag system
-    var this_piece_index;
-    // If there is no next piece yet
-    if (next_piece_index == -1) {
-        this_piece_index = Math.floor(Math.random() * 7);
-        next_piece_index = Math.floor(Math.random() * 7);
-    } 
-    else {
-        this_piece_index = next_piece_index;
-        next_piece_index = Math.floor(Math.random() * 7);
-    }
-    // TODO: do this differently?
-    if (next_piece_coords.length > 0) {
-        clearPiece(next_piece_coords);
-    }
-    switch (next_piece_index) {
-        case 0:
-            next_piece_coords = [[2,11],[2,12],[3,11],[3,12]];
-            drawPiece(next_piece_coords, TETROMINOS.O);
-            break;
-        case 1:
-            next_piece_coords = [[3,10],[3,11],[3,12],[3,13]];
-            drawPiece(next_piece_coords, TETROMINOS.I);
-            break;
-        case 2:
-            next_piece_coords = [[3,10],[3,11],[3,12],[2,11]];
-            drawPiece(next_piece_coords, TETROMINOS.T);
-            break;
-        case 3:
-            next_piece_coords = [[3,11],[2,11],[2,12],[3,10]];
-            drawPiece(next_piece_coords, TETROMINOS.S);
-            break;
-        case 4:
-            next_piece_coords = [[3,11],[2,10],[2,11],[3,12]];
-            drawPiece(next_piece_coords, TETROMINOS.Z);
-            break;
-        case 5:
-            next_piece_coords = [[3,11],[2,10],[3,10],[3,12]];
-            drawPiece(next_piece_coords, TETROMINOS.J);
-            break;
-        case 6:
-            next_piece_coords = [[3,11],[2,12],[3,10],[3,12]];
-            drawPiece(next_piece_coords, TETROMINOS.L);
-            break;
-    }
-    switch (this_piece_index) {
-        case 0:
-            current_piece.coords = [[0,4], [0,5], [1,4], [1,5]];
-            current_piece.origin = [0.5, 4.5];
-            current_piece.type = TETROMINOS.O;
-            break;
-        case 1:
-            current_piece.coords = [[1,3],[1,4],[1,5],[1,6]];
-            current_piece.origin = [1.5, 4.5];
-            current_piece.type = TETROMINOS.I;
-            break;
-        case 2:
-            current_piece.coords = [[1,4],[0,4],[1,3],[1,5]];
-            current_piece.origin = [1,4];
-            current_piece.type = TETROMINOS.T;
-            break;
-        case 3:
-            current_piece.coords = [[1,4],[0,4],[0,5],[1,3]];
-            current_piece.origin = [1,4];
-            current_piece.type = TETROMINOS.S;
-            break;
-        case 4:
-            current_piece.coords = [[1,4],[0,3],[0,4],[1,5]];
-            current_piece.origin = [1,4];
-            current_piece.type = TETROMINOS.Z;
-            break;
-        case 5:
-            current_piece.coords = [[1,4],[0,3],[1,3],[1,5]];
-            current_piece.origin = [1,4];
-            current_piece.type = TETROMINOS.J;
-            break;
-        case 6:
-            current_piece.coords = [[1,4],[0,5],[1,3],[1,5]];
-            current_piece.origin = [1,4];
-            current_piece.type = TETROMINOS.L;
-            break;
-    }
+    if (piece_bag.length < 2) extendBag();
+
+    // Clear next piece preview
+    clearPiece(TETROMINOES[piece_bag[0]].next_coords);
+
+    //next_piece_index = Math.floor(Math.random() * 7);
+    let this_piece_index = piece_bag.shift();
+    let next_piece_index = piece_bag[0];
+
+    
+
+    //  else {
+    //      // Clear next piece preview
+    //      clearPiece(TETROMINOES[next_piece_index].next_coords);
+
+    //      this_piece_index = next_piece_index;
+    //      next_piece_index = Math.floor(Math.random() * 7);
+    //  }
+
+    // Draw next piece preview
+    drawPiece(TETROMINOES[next_piece_index].next_coords, TETROMINOES[next_piece_index].color);
+
+    // Set current piece properties based on which tetromino is being spawned
+    let tetromino = TETROMINOES[this_piece_index];
     current_piece.has_moved = true;
+    current_piece.coords = tetromino.coords;
+    // TODO: what to use here?
+    current_piece.origin = new Array(tetromino.origin[0], tetromino.origin[1]);
+    current_piece.color = tetromino.color;
+    current_piece.type = tetromino.name;
+    current_piece.active = true;
+}
+
+function extendBag() {
+    let new_bag = [0,1,2,3,4,5,6];
+    // Permutations of the new bag
+    for (let k = 0; k < new_bag.length; k++) {
+        let swap = k + Math.floor(Math.random() * (new_bag.length - k));
+        let temp = new_bag[k];
+        new_bag[k] = new_bag[swap];
+        new_bag[swap] = temp;
+    }
+    piece_bag = piece_bag.concat(new_bag);
 }
 
 function rotateLeft() {
-    if (current_piece.type == TETROMINOS.O) return;
-    var origin = current_piece.origin;
+    if (current_piece.type == "O") return;
+    let origin = current_piece.origin;
 
-    var moved_piece = [];
-    for (var k in current_piece.coords) {
-        var temp = []
+    let moved_piece = [];
+    for (let k in current_piece.coords) {
+        let temp = []
             temp[0] = current_piece.coords[k][0] - origin[0];
         temp[1] = current_piece.coords[k][1] - origin[1];
         // 90 degree rotation matrix
         //[0 -1]
         //[1  0]
-        var row = -1 * temp[1] + origin[0];
-        var col = temp[0] + origin[1];
+        let row = -1 * temp[1] + origin[0];
+        let col = temp[0] + origin[1];
         // Collision checks
         if (row < 0 || row > MAX_ROWS
                 || col < 0 || col > MAX_COLS) {
@@ -306,19 +276,19 @@ function rotateLeft() {
 }
 
 function rotateRight() {
-    if (current_piece.type == TETROMINOS.O) return;
-    var origin = current_piece.origin;
+    if (current_piece.type == "O") return;
+    let origin = current_piece.origin;
 
-    var moved_piece = [];
-    for (var k in current_piece.coords) {
-        var temp = []
+    let moved_piece = [];
+    for (let k in current_piece.coords) {
+        let temp = []
         temp[0] = current_piece.coords[k][0] - origin[0];
         temp[1] = current_piece.coords[k][1] - origin[1];
         // -90 degree rotation matrix
         //[0  1]
         //[-1 0]
-        var row = temp[1] + origin[0];
-        var col = -1 * temp[0] + origin[1];
+        let row = temp[1] + origin[0];
+        let col = -1 * temp[0] + origin[1];
         // Collision checks
         if (row < 0 || row > MAX_ROWS
                 || col < 0 || col > MAX_COLS) {
@@ -342,11 +312,11 @@ function rotateRight() {
 function moveTetromino(roffset, coffset) {
     if (!current_piece.active) return;
 
-    var moved_piece = [];
+    let moved_piece = [];
 
     for (k in current_piece.coords) {
-        var row = current_piece.coords[k][0] + roffset;
-        var col = current_piece.coords[k][1] + coffset;
+        let row = current_piece.coords[k][0] + roffset;
+        let col = current_piece.coords[k][1] + coffset;
         // Collision checks
         if (col < 0 || col >= MAX_COLS) {
             // Hitting matrix edges
@@ -380,13 +350,13 @@ function moveTetromino(roffset, coffset) {
 // Makes current piece inactive
 function deactivatePiece() {
     // Assume true until set to false
-    var game_over = true;
+    let game_over = true;
     // Array of unique row numbers that the resting spot of the 
     //	piece will occupy
-    var unique_rows = [];
-    for (var k in current_piece.coords) {
+    let unique_rows = [];
+    for (let k in current_piece.coords) {
         inactive_pieces[current_piece.coords[k][0]][current_piece.coords[k][1]] 
-                = current_piece.type;
+                = current_piece.color;
         // Ensure piece visibility
         drawCurrentPiece();
         // Game is only ended if the piece is deactivated 
@@ -413,10 +383,10 @@ function deactivatePiece() {
 function checkRows(unique_rows) {
     unique_rows.sort();
     cleared_rows = [];
-    for (var r in unique_rows) {
-        var row = unique_rows[r];
-        var row_cleared = true;
-        for (var c = 0; c < MAX_COLS; c++) {
+    for (let r in unique_rows) {
+        let row = unique_rows[r];
+        let row_cleared = true;
+        for (let c = 0; c < MAX_COLS; c++) {
             if (inactive_pieces[row][c] == EMPTY) {
                 //console.log("row " + row + " not cleared, col " + c + " empty");
                 row_cleared = false;
@@ -437,15 +407,15 @@ function checkRows(unique_rows) {
     }
 }
 
-// Uses global variable cleared_rows and pushes down
+// Uses global letiable cleared_rows and pushes down
 //  the blocks above those rows.
 function moveDownRows() {
-    for (var r in cleared_rows) {
-        var cleared_row = cleared_rows[r];
+    for (let r in cleared_rows) {
+        let cleared_row = cleared_rows[r];
         console.log("Moving down rows above " + cleared_row);
         // Iterate up the rows that get shifted down
-        for (var row = cleared_row; row > 1; row--) {
-            for (var col = 0; col < MAX_COLS; col++) {
+        for (let row = cleared_row; row > 1; row--) {
+            for (let col = 0; col < MAX_COLS; col++) {
                 inactive_pieces[row][col] = inactive_pieces[row-1][col];
                 if (inactive_pieces[row][col] == EMPTY) {
                     clearCell([row, col]);
@@ -461,7 +431,7 @@ function moveDownRows() {
 
 function clearRow(cleared_row) {
     console.log("clearing row" + cleared_row);
-    for (var col = 0; col < MAX_COLS; col++) {
+    for (let col = 0; col < MAX_COLS; col++) {
         inactive_pieces[cleared_row][col] = EMPTY;
         clearCell([cleared_row, col]);
     }
@@ -487,7 +457,7 @@ function clearPiece(coords) {
 function drawCurrentPiece() {
     // Draw ghost first, then draw current piece on top
     drawPiece(current_piece.ghost_coords, GHOST_COLOR);
-    drawPiece(current_piece.coords, current_piece.type);
+    drawPiece(current_piece.coords, current_piece.color);
 }
 
 function clearCurrentPiece() {
@@ -500,31 +470,31 @@ function colorCell(coords, color) {
     context.fillStyle = color;
     context.strokeStyle = color;
 
-    var rowCoord = coords[0] - BUFFER_SIZE;
+    let rowCoord = coords[0] - BUFFER_SIZE;
     if (rowCoord < 0) return; // Don't draw if in buffer zone
-    var startRow = rowCoord * GRID_PIXEL_SIZE + start_pos[0] + 1; 
-    var startCol = coords[1] * GRID_PIXEL_SIZE + start_pos[1] + 1;
+    let startRow = rowCoord * GRID_PIXEL_SIZE + start_pos[0] + 1; 
+    let startCol = coords[1] * GRID_PIXEL_SIZE + start_pos[1] + 1;
     context.fillRect(startCol, startRow, GRID_PIXEL_SIZE - 2, GRID_PIXEL_SIZE - 2);
     //context.rect(startCol, startRow, GRID_PIXEL_SIZE - 2, GRID_PIXEL_SIZE - 2);
     //context.stroke();
 }
 
 function clearCell(coords) {
-    var rowCoord = coords[0] - BUFFER_SIZE;
+    let rowCoord = coords[0] - BUFFER_SIZE;
     if (rowCoord < 0) return; // Don't draw if in buffer zone
-    var startRow = rowCoord * GRID_PIXEL_SIZE + start_pos[0] + 1; 
-    var startCol = coords[1] * GRID_PIXEL_SIZE + start_pos[1] + 1;
+    let startRow = rowCoord * GRID_PIXEL_SIZE + start_pos[0] + 1; 
+    let startCol = coords[1] * GRID_PIXEL_SIZE + start_pos[1] + 1;
     context.clearRect(startCol, startRow, GRID_PIXEL_SIZE - 2, GRID_PIXEL_SIZE - 2);
 }
 
 function drawGrid() {
-    var rowCount = 0;
-    var colCount = 0;
+    let rowCount = 0;
+    let colCount = 0;
     boardHeight = start_pos[0] + GRID_PIXEL_SIZE * (MAX_ROWS - BUFFER_SIZE);
     boardWidth = start_pos[1] + GRID_PIXEL_SIZE * MAX_COLS;
 
     // Draw horizontals
-    for (var pixrow = start_pos[0]; 
+    for (let pixrow = start_pos[0]; 
             rowCount <= MAX_ROWS - BUFFER_SIZE; 
             pixrow += GRID_PIXEL_SIZE, rowCount++) {
 
@@ -533,7 +503,7 @@ function drawGrid() {
     }
 
     // Draw verticals
-    for (var pixcol = start_pos[1]; 
+    for (let pixcol = start_pos[1]; 
 			colCount <= MAX_COLS; 
 			pixcol += GRID_PIXEL_SIZE, colCount++) {
 			
