@@ -8,6 +8,7 @@ https://jordan-ross.github.io/TetrisJS/
 - Soft Drop
 - Wall kicks
 - Hold Piece
+- Alternate key bindings
 
 ## Reference 
-zhttps://tetris.wiki/Tetris_Guideline
+https://tetris.wiki/Tetris_Guideline
