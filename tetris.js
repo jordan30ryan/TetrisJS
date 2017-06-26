@@ -25,13 +25,13 @@ var tick = 0;
 var gameLoopId;
 
 var TETROMINOS = {
-	I: "#31C7EF", 
-	O: "#F7D308", 
-	T: "#AD4D9C", 
-	S: "#42B642", 
-	Z: "#EF2029", 
-	J: "#5A65AD", 
-	L: "#EF7921"
+I: "#31C7EF", 
+   O: "#F7D308", 
+   T: "#AD4D9C", 
+   S: "#42B642", 
+   Z: "#EF2029", 
+   J: "#5A65AD", 
+   L: "#EF7921"
 };
 
 var EMPTY = "#FFFFFF"
@@ -44,12 +44,12 @@ var FALL_RATE = 30;
 var inactive_pieces = [];
 
 var current_piece = {
-	active: false,
-    clearing: false,
-	coords: [],
-    origin: [],
-    ghost_coords: [],
-	type: EMPTY,
+active: false,
+        clearing: false,
+        coords: [],
+        origin: [],
+        ghost_coords: [],
+        type: EMPTY,
 }
 
 // Array of rows that were previously cleared
@@ -65,64 +65,66 @@ var next_piece_coords = [];
 /*Page Functions--------------------------------------------------------------*/
 
 window.onload = function() {
-	canvas = document.getElementById("game");
-	canvas.width = window.innerWidth - WINDOW_PADDING;
-	canvas.height = window.innerHeight - WINDOW_PADDING;
-	
-	//start_pos[0] = canvas.height / 4;
-	//start_pos[1] = canvas.width / 2;
-	
-	//Setup inactive piece array
-	for (var r = 0; r < MAX_ROWS; r++) {
-		var temparray = [];
-		for (var c = 0; c < MAX_COLS; c++) {
-			temparray[c] = EMPTY;
-		}
-		inactive_pieces.push(temparray);
-	}
-	
-	context = canvas.getContext("2d");
-	
-	drawGrid();
+    canvas = document.getElementById("game");
+    canvas.width = window.innerWidth - WINDOW_PADDING;
+    canvas.height = window.innerHeight - WINDOW_PADDING;
+
+    //start_pos[0] = canvas.height / 4;
+    //start_pos[1] = canvas.width / 2;
+
+    //Setup inactive piece array
+    for (var r = 0; r < MAX_ROWS; r++) {
+        var temparray = [];
+        for (var c = 0; c < MAX_COLS; c++) {
+            temparray[c] = EMPTY;
+        }
+        inactive_pieces.push(temparray);
+    }
+
+    context = canvas.getContext("2d");
+
+    drawGrid();
     drawSidePanels();
-	
-	play();
+
+    play();
 }
 
 document.addEventListener('keydown', function(event) {
     // block input if in the middle of clearing 
     if (current_piece.clearing) return;
-	// UP
-	if(event.keyCode == 38) {
-		hardDrop();
-	}
-	// LEFT
-	if(event.keyCode == 37) {
-		moveTetromino(0, -1);
-	}
-	// RIGHT
-	else if(event.keyCode == 39) {
-		moveTetromino(0,1);
-	}
-	// ROTATE L
-	else if (event.keyCode == 90) {
-		rotateLeft();
-	}
-	// ROTATE R
-	else if (event.keyCode == 88) {
-		rotateRight();
-	}
+    // UP
+    if(event.keyCode == 38) {
+        hardDrop();
+    }
+    // LEFT
+    if(event.keyCode == 37) {
+        moveTetromino(0, -1);
+    }
+    // RIGHT
+    else if(event.keyCode == 39) {
+        moveTetromino(0,1);
+    }
+    // ROTATE L
+    else if (event.keyCode == 90) {
+        rotateLeft();
+    }
+    // ROTATE R
+    else if (event.keyCode == 88) {
+        rotateRight();
+    }
 });
 
 /*Game Functions--------------------------------------------------------------*/
 
 function play() {
-	gameLoopId = setInterval(nextTick, TICK_DELAY);
+    gameLoopId = setInterval(nextTick, TICK_DELAY);
 }
 
 function nextTick() {
-	tick++;
-    if (tick == next_clear_tick) {
+    tick++;
+    // If there's something to shift down and it's at least the tick
+    //	at which lines drop
+    if (cleared_rows.length > 0 && tick >= next_clear_tick) {
         moveDownRows();
         current_piece.clearing = false;
     }
@@ -130,16 +132,16 @@ function nextTick() {
     else if (current_piece.clearing) {
         return;
     }
-	else if (current_piece.active) {
+    else if (current_piece.active) {
         moveActiveTetromino();
     }
-	else {		
-		spawnTetromino();
-	}
+    else {		
+        spawnTetromino();
+    }
 
     calculateCurrentPieceGhost();
 
-	if (current_piece.active) { 
+    if (current_piece.active) { 
         drawCurrentPiece(); 
     }
 }
@@ -149,7 +151,7 @@ function calculateCurrentPieceGhost() {
     // Largest downward shift the current piece can make without moving 
     var largest_shift = MAX_ROWS;
     // Calculate the largest shift
-	for (var cell in current_piece.coords) {
+    for (var cell in current_piece.coords) {
         var highest_available_position = MAX_ROWS - 1;
         for (var row = highest_available_position; row > current_piece.coords[cell][0]; row--) {
             if (inactive_pieces[row][current_piece.coords[cell][1]] != EMPTY) {
@@ -158,12 +160,12 @@ function calculateCurrentPieceGhost() {
         }
         var shift = highest_available_position - current_piece.coords[cell][0];
         if (shift < largest_shift) largest_shift = shift;
-	}
+    }
     // Apply largest shift to the current coords and set those as the ghost coords
     current_piece.ghost_coords = [];
     for (cell in current_piece.coords) {
         current_piece.ghost_coords.push([current_piece.coords[cell][0] + largest_shift,
-                                        current_piece.coords[cell][1]]);
+                current_piece.coords[cell][1]]);
     }
 }
 
@@ -174,15 +176,15 @@ function hardDrop() {
 }
 
 function moveActiveTetromino() {
-	if ((tick+1) % FALL_RATE == 0) {
-		// move tetromino down 1 row
-		moveTetromino(1, 0);
-	}
+    if ((tick+1) % FALL_RATE == 0) {
+        // move tetromino down 1 row
+        moveTetromino(1, 0);
+    }
 }
 
 function spawnTetromino() {
-	current_piece.active = true;
-	// TODO: random bag system
+    current_piece.active = true;
+    // TODO: random bag system
     var this_piece_index;
     // If there is no next piece yet
     if (next_piece_index == -1) {
@@ -198,204 +200,205 @@ function spawnTetromino() {
         clearPiece(next_piece_coords);
     }
     switch (next_piece_index) {
-		case 0:
+        case 0:
             next_piece_coords = [[2,11],[2,12],[3,11],[3,12]];
             drawPiece(next_piece_coords, TETROMINOS.O);
-			break;
-		case 1:
+            break;
+        case 1:
             next_piece_coords = [[3,10],[3,11],[3,12],[3,13]];
             drawPiece(next_piece_coords, TETROMINOS.I);
-			break;
-		case 2:
+            break;
+        case 2:
             next_piece_coords = [[3,10],[3,11],[3,12],[2,11]];
             drawPiece(next_piece_coords, TETROMINOS.T);
-			break;
-		case 3:
+            break;
+        case 3:
             next_piece_coords = [[3,11],[2,11],[2,12],[3,10]];
             drawPiece(next_piece_coords, TETROMINOS.S);
-			break;
-		case 4:
+            break;
+        case 4:
             next_piece_coords = [[3,11],[2,10],[2,11],[3,12]];
             drawPiece(next_piece_coords, TETROMINOS.Z);
-			break;
-		case 5:
+            break;
+        case 5:
             next_piece_coords = [[3,11],[2,10],[3,10],[3,12]];
             drawPiece(next_piece_coords, TETROMINOS.J);
-			break;
-		case 6:
+            break;
+        case 6:
             next_piece_coords = [[3,11],[2,12],[3,10],[3,12]];
             drawPiece(next_piece_coords, TETROMINOS.L);
-			break;
-	}
-	switch (this_piece_index) {
-		case 0:
-			current_piece.coords = [[0,4], [0,5], [1,4], [1,5]];
-			current_piece.origin = [0.5, 4.5];
-			current_piece.type = TETROMINOS.O;
-			break;
-		case 1:
-			current_piece.coords = [[1,3],[1,4],[1,5],[1,6]];
-			current_piece.origin = [1.5, 4.5];
-			current_piece.type = TETROMINOS.I;
-			break;
-		case 2:
-			current_piece.coords = [[1,4],[0,4],[1,3],[1,5]];
-			current_piece.origin = [1,4];
-			current_piece.type = TETROMINOS.T;
-			break;
-		case 3:
-			current_piece.coords = [[1,4],[0,4],[0,5],[1,3]];
-			current_piece.origin = [1,4];
-			current_piece.type = TETROMINOS.S;
-			break;
-		case 4:
-			current_piece.coords = [[1,4],[0,3],[0,4],[1,5]];
-			current_piece.origin = [1,4];
-			current_piece.type = TETROMINOS.Z;
-			break;
-		case 5:
-			current_piece.coords = [[1,4],[0,3],[1,3],[1,5]];
-			current_piece.origin = [1,4];
-			current_piece.type = TETROMINOS.J;
-			break;
-		case 6:
-			current_piece.coords = [[1,4],[0,5],[1,3],[1,5]];
-			current_piece.origin = [1,4];
-			current_piece.type = TETROMINOS.L;
-			break;
-	}
+            break;
+    }
+    switch (this_piece_index) {
+        case 0:
+            current_piece.coords = [[0,4], [0,5], [1,4], [1,5]];
+            current_piece.origin = [0.5, 4.5];
+            current_piece.type = TETROMINOS.O;
+            break;
+        case 1:
+            current_piece.coords = [[1,3],[1,4],[1,5],[1,6]];
+            current_piece.origin = [1.5, 4.5];
+            current_piece.type = TETROMINOS.I;
+            break;
+        case 2:
+            current_piece.coords = [[1,4],[0,4],[1,3],[1,5]];
+            current_piece.origin = [1,4];
+            current_piece.type = TETROMINOS.T;
+            break;
+        case 3:
+            current_piece.coords = [[1,4],[0,4],[0,5],[1,3]];
+            current_piece.origin = [1,4];
+            current_piece.type = TETROMINOS.S;
+            break;
+        case 4:
+            current_piece.coords = [[1,4],[0,3],[0,4],[1,5]];
+            current_piece.origin = [1,4];
+            current_piece.type = TETROMINOS.Z;
+            break;
+        case 5:
+            current_piece.coords = [[1,4],[0,3],[1,3],[1,5]];
+            current_piece.origin = [1,4];
+            current_piece.type = TETROMINOS.J;
+            break;
+        case 6:
+            current_piece.coords = [[1,4],[0,5],[1,3],[1,5]];
+            current_piece.origin = [1,4];
+            current_piece.type = TETROMINOS.L;
+            break;
+    }
 }
 
 function rotateLeft() {
-	if (current_piece.type == TETROMINOS.O) return;
-	var origin = current_piece.origin;
+    if (current_piece.type == TETROMINOS.O) return;
+    var origin = current_piece.origin;
 
-	var moved_piece = [];
-	for (var k in current_piece.coords) {
-		var temp = []
-		temp[0] = current_piece.coords[k][0] - origin[0];
-		temp[1] = current_piece.coords[k][1] - origin[1];
-		// 90 degree rotation matrix
-		//[0 -1]
-		//[1  0]
-		var row = -1 * temp[1] + origin[0];
-		var col = temp[0] + origin[1];
-		// Collision checks
-		if (row < 0 || row > MAX_ROWS
-				|| col < 0 || col > MAX_COLS) {
-			// Rotation would colide with walls
-			return;
-		}
-		if (inactive_pieces[row][col] != EMPTY) {
-			// Rotation would collide with inactive piece
-			return;
-		}
-		moved_piece[k] = [Math.floor(row), Math.floor(col)];
-	}
-	
-	// Remove current piece to redraw
-	// TODO: Optimize by keeping spaces that are removed then added?
-	clearCurrentPiece();
-	current_piece.coords = moved_piece;
+    var moved_piece = [];
+    for (var k in current_piece.coords) {
+        var temp = []
+            temp[0] = current_piece.coords[k][0] - origin[0];
+        temp[1] = current_piece.coords[k][1] - origin[1];
+        // 90 degree rotation matrix
+        //[0 -1]
+        //[1  0]
+        var row = -1 * temp[1] + origin[0];
+        var col = temp[0] + origin[1];
+        // Collision checks
+        if (row < 0 || row > MAX_ROWS
+                || col < 0 || col > MAX_COLS) {
+            // Rotation would colide with walls
+            return;
+        }
+        if (inactive_pieces[row][col] != EMPTY) {
+            // Rotation would collide with inactive piece
+            return;
+        }
+        moved_piece[k] = [Math.floor(row), Math.floor(col)];
+    }
+
+    // Remove current piece to redraw
+    // TODO: Optimize by keeping spaces that are removed then added?
+    clearCurrentPiece();
+    current_piece.coords = moved_piece;
 }
 
 function rotateRight() {
-	if (current_piece.type == TETROMINOS.O) return;
-	var origin = current_piece.origin;
+    if (current_piece.type == TETROMINOS.O) return;
+    var origin = current_piece.origin;
 
-	var moved_piece = [];
-	for (var k in current_piece.coords) {
-		var temp = []
-		temp[0] = current_piece.coords[k][0] - origin[0];
-		temp[1] = current_piece.coords[k][1] - origin[1];
-		// -90 degree rotation matrix
-		//[0  1]
-		//[-1 0]
-		var row = temp[1] + origin[0];
-		var col = -1 * temp[0] + origin[1];
-		// Collision checks
-		if (row < 0 || row > MAX_ROWS
-				|| col < 0 || col > MAX_COLS) {
-			// Rotation would colide with walls
-			return;
-		}
-		if (inactive_pieces[row][col] != EMPTY) {
-			// Rotation would collide with inactive piece
-			return;
-		}
-		moved_piece[k] = [row, col];
-	}
-	
-	// Remove current piece to redraw
-	// TODO: Optimize by keeping spaces that are removed then added?
-	clearCurrentPiece();
-	current_piece.coords = moved_piece;
+    var moved_piece = [];
+    for (var k in current_piece.coords) {
+        var temp = []
+        temp[0] = current_piece.coords[k][0] - origin[0];
+        temp[1] = current_piece.coords[k][1] - origin[1];
+        // -90 degree rotation matrix
+        //[0  1]
+        //[-1 0]
+        var row = temp[1] + origin[0];
+        var col = -1 * temp[0] + origin[1];
+        // Collision checks
+        if (row < 0 || row > MAX_ROWS
+                || col < 0 || col > MAX_COLS) {
+            // Rotation would colide with walls
+            return;
+        }
+        if (inactive_pieces[row][col] != EMPTY) {
+            // Rotation would collide with inactive piece
+            return;
+        }
+        moved_piece[k] = [row, col];
+    }
+
+    // Remove current piece to redraw
+    // TODO: Optimize by keeping spaces that are removed then added?
+    clearCurrentPiece();
+    current_piece.coords = moved_piece;
 }
 
 function moveTetromino(roffset, coffset) {
-	if (!current_piece.active) return;
-	
-	var moved_piece = [];
-	
-	for (k in current_piece.coords) {
-		var row = current_piece.coords[k][0] + roffset;
-		var col = current_piece.coords[k][1] + coffset;
-		// Collision checks
-		if (col < 0 || col >= MAX_COLS) {
-			// Hitting matrix edges
-			return;
-		}
-		if (row >= MAX_ROWS) {
-			// Current piece hits bottom
-			deactivatePiece();
-			return;
-		}
-		if (inactive_pieces[row][col] != EMPTY) {
-			// Current piece collides with inactive piece to the side
-			if (roffset == 0) return;
-			// Current piece collides with inactive piece below
-			deactivatePiece();
-			return;
-		}
-		
-		moved_piece[k] = [row, col];
-	}
-	current_piece.origin[0] += roffset;
-	current_piece.origin[1] += coffset;
-	// Remove current piece to redraw
-	// TODO: Optimize by keeping spaces that are removed then added?
-	clearCurrentPiece();
+    if (!current_piece.active) return;
 
-	current_piece.coords = moved_piece;
+    var moved_piece = [];
+
+    for (k in current_piece.coords) {
+        var row = current_piece.coords[k][0] + roffset;
+        var col = current_piece.coords[k][1] + coffset;
+        // Collision checks
+        if (col < 0 || col >= MAX_COLS) {
+            // Hitting matrix edges
+            return;
+        }
+        if (row >= MAX_ROWS) {
+            // Current piece hits bottom
+            deactivatePiece();
+            return;
+        }
+        if (inactive_pieces[row][col] != EMPTY) {
+            // Current piece collides with inactive piece to the side
+            if (roffset == 0) return;
+            // Current piece collides with inactive piece below
+            deactivatePiece();
+            return;
+        }
+
+        moved_piece[k] = [row, col];
+    }
+    current_piece.origin[0] += roffset;
+    current_piece.origin[1] += coffset;
+    // Remove current piece to redraw
+    // TODO: Optimize by keeping spaces that are removed then added?
+    clearCurrentPiece();
+
+    current_piece.coords = moved_piece;
 }
 
 // Makes current piece inactive
 function deactivatePiece() {
-	var game_over = true;
-	// Array of unique row numbers that the resting spot of the 
-	//	piece will occupy
-	var unique_rows = [];
-	for (var k in current_piece.coords) {
-		inactive_pieces[current_piece.coords[k][0]][current_piece.coords[k][1]] = current_piece.type;
-		// Ensure piece visibility
-		drawCurrentPiece();
-		// Game is only ended if the piece is deactivated 
-		//	above the buffer; that is, no cells of the piece
-		//	are below the buffer
-		if (current_piece.coords[k][0] >= BUFFER_SIZE) game_over = false;
-		if (!unique_rows.includes(current_piece.coords[k][0])) {
-			unique_rows.push(current_piece.coords[k][0]);
-		}
-	}
-	
-	current_piece.active = false;
+    var game_over = true;
+    // Array of unique row numbers that the resting spot of the 
+    //	piece will occupy
+    var unique_rows = [];
+    for (var k in current_piece.coords) {
+        inactive_pieces[current_piece.coords[k][0]][current_piece.coords[k][1]] 
+                = current_piece.type;
+        // Ensure piece visibility
+        drawCurrentPiece();
+        // Game is only ended if the piece is deactivated 
+        //	above the buffer; that is, no cells of the piece
+        //	are below the buffer
+        if (current_piece.coords[k][0] >= BUFFER_SIZE) game_over = false;
+        if (!unique_rows.includes(current_piece.coords[k][0])) {
+            unique_rows.push(current_piece.coords[k][0]);
+        }
+    }
 
-	checkRows(unique_rows);
+    current_piece.active = false;
 
-	if (game_over) {
-		clearInterval(gameLoopId);
-		alert("Game Over");
-	}
+    checkRows(unique_rows);
+
+    if (game_over) {
+        clearInterval(gameLoopId);
+        alert("Game Over");
+    }
 }
 
 // TODO: Optimize row clearing
@@ -403,24 +406,27 @@ function deactivatePiece() {
 function checkRows(unique_rows) {
     unique_rows.sort();
     cleared_rows = [];
-	for (var r in unique_rows) {
-		var row = unique_rows[r];
-		var row_cleared = true;
-		for (var c = 0; c < MAX_COLS; c++) {
-			if (inactive_pieces[row][c] == EMPTY) {
-                console.log("row " + row + " not cleared, col " + c + " empty");
-				row_cleared = false;
-				break;
-			}
-		}
-		if (row_cleared) {
+    for (var r in unique_rows) {
+        var row = unique_rows[r];
+        var row_cleared = true;
+        for (var c = 0; c < MAX_COLS; c++) {
+            if (inactive_pieces[row][c] == EMPTY) {
+                //console.log("row " + row + " not cleared, col " + c + " empty");
+                row_cleared = false;
+                break;
+            }
+        }
+        if (row_cleared) {
             cleared_rows.push(row);
-			clearRow(row);
-		}
-	}
+            clearRow(row);
+        }
+    }
     if (cleared_rows.length > 0) {
-        current_piece.clearing = true; 
+        // Set the tick at which the line clear animation will happen.
+        // All ticks between now and the clear will be a pass 
+        //	because current piece is set to clearing
         next_clear_tick = tick + CLEAR_TICK_DELAY;
+        current_piece.clearing = true; 
     }
 }
 
@@ -429,26 +435,28 @@ function checkRows(unique_rows) {
 function moveDownRows() {
     for (var r in cleared_rows) {
         var cleared_row = cleared_rows[r];
+        console.log("Moving down rows above " + cleared_row);
         // Iterate up the rows that get shifted down
-	    for (var row = cleared_row; row > 1; row--) {
-	    	for (var col = 0; col < MAX_COLS; col++) {
-	    		inactive_pieces[row][col] = inactive_pieces[row-1][col];
-	    		if (inactive_pieces[row][col] == EMPTY) {
-	    			clearCell([row, col]);
-	    		} else {
-	    			colorCell([row, col], inactive_pieces[row][col]);
-	    		}
-	    	}
-	    }
+        for (var row = cleared_row; row > 1; row--) {
+            for (var col = 0; col < MAX_COLS; col++) {
+                inactive_pieces[row][col] = inactive_pieces[row-1][col];
+                if (inactive_pieces[row][col] == EMPTY) {
+                    clearCell([row, col]);
+                } else {
+                    colorCell([row, col], inactive_pieces[row][col]);
+                }
+            }
+        }
     }
+    cleared_rows = [];
 }
 
 function clearRow(cleared_row) {
-	console.log("clearing row" + cleared_row);
-	for (var col = 0; col < MAX_COLS; col++) {
-		inactive_pieces[cleared_row][col] = EMPTY;
-		clearCell([cleared_row, col]);
-	}
+    console.log("clearing row" + cleared_row);
+    for (var col = 0; col < MAX_COLS; col++) {
+        inactive_pieces[cleared_row][col] = EMPTY;
+        clearCell([cleared_row, col]);
+    }
 }
 
 /*Canvas functions------------------------------------------------------------*/
@@ -456,14 +464,14 @@ function clearRow(cleared_row) {
 
 function drawPiece(coords, type) {
     for (cell in coords) {
-		colorCell(coords[cell], type);
-	}
+        colorCell(coords[cell], type);
+    }
 }
 
 function clearPiece(coords) {
-	for (cell in coords) {
-		clearCell(coords[cell]);
-	}
+    for (cell in coords) {
+        clearCell(coords[cell]);
+    }
 }
 
 function drawCurrentPiece() {
@@ -478,50 +486,50 @@ function clearCurrentPiece() {
 }
 
 function colorCell(coords, color) {
-	context.fillStyle = color;
+    context.fillStyle = color;
     context.strokeStyle = color;
 
-	var rowCoord = coords[0] - BUFFER_SIZE;
-	if (rowCoord < 0) return; // Don't draw if in buffer zone
-	var startRow = rowCoord * GRID_PIXEL_SIZE + start_pos[0] + 1; 
-	var startCol = coords[1] * GRID_PIXEL_SIZE + start_pos[1] + 1;
-	context.fillRect(startCol, startRow, GRID_PIXEL_SIZE - 2, GRID_PIXEL_SIZE - 2);
+    var rowCoord = coords[0] - BUFFER_SIZE;
+    if (rowCoord < 0) return; // Don't draw if in buffer zone
+    var startRow = rowCoord * GRID_PIXEL_SIZE + start_pos[0] + 1; 
+    var startCol = coords[1] * GRID_PIXEL_SIZE + start_pos[1] + 1;
+    context.fillRect(startCol, startRow, GRID_PIXEL_SIZE - 2, GRID_PIXEL_SIZE - 2);
 }
 
 function clearCell(coords) {
-	var rowCoord = coords[0] - BUFFER_SIZE;
-	if (rowCoord < 0) return; // Don't draw if in buffer zone
-	var startRow = rowCoord * GRID_PIXEL_SIZE + start_pos[0] + 1; 
-	var startCol = coords[1] * GRID_PIXEL_SIZE + start_pos[1] + 1;
-	context.clearRect(startCol, startRow, GRID_PIXEL_SIZE - 2, GRID_PIXEL_SIZE - 2);
+    var rowCoord = coords[0] - BUFFER_SIZE;
+    if (rowCoord < 0) return; // Don't draw if in buffer zone
+    var startRow = rowCoord * GRID_PIXEL_SIZE + start_pos[0] + 1; 
+    var startCol = coords[1] * GRID_PIXEL_SIZE + start_pos[1] + 1;
+    context.clearRect(startCol, startRow, GRID_PIXEL_SIZE - 2, GRID_PIXEL_SIZE - 2);
 }
 
 function drawGrid() {
-	var rowCount = 0;
-	var colCount = 0;
+    var rowCount = 0;
+    var colCount = 0;
     boardHeight = start_pos[0] + GRID_PIXEL_SIZE * (MAX_ROWS - BUFFER_SIZE);
     boardWidth = start_pos[1] + GRID_PIXEL_SIZE * MAX_COLS;
 
-	// Draw horizontals
-	for (var pixrow = start_pos[0]; 
-			rowCount <= MAX_ROWS - BUFFER_SIZE; 
-			pixrow += GRID_PIXEL_SIZE, rowCount++) {
-				
-		context.moveTo(start_pos[1], pixrow);
-		context.lineTo(boardWidth, pixrow);
-	}	
+    // Draw horizontals
+    for (var pixrow = start_pos[0]; 
+            rowCount <= MAX_ROWS - BUFFER_SIZE; 
+            pixrow += GRID_PIXEL_SIZE, rowCount++) {
 
-	// Draw verticals
-	for (var pixcol = start_pos[1]; 
-			colCount <= MAX_COLS; 
-			pixcol += GRID_PIXEL_SIZE, colCount++) {
-		context.moveTo(pixcol, start_pos[0]);
-		context.lineTo(pixcol, boardHeight);
-	}
-	
+        context.moveTo(start_pos[1], pixrow);
+        context.lineTo(boardWidth, pixrow);
+    }	
+
+    // Draw verticals
+    for (var pixcol = start_pos[1]; 
+            colCount <= MAX_COLS; 
+            pixcol += GRID_PIXEL_SIZE, colCount++) {
+        context.moveTo(pixcol, start_pos[0]);
+        context.lineTo(pixcol, boardHeight);
+    }
+
     // TODO: format the UI color
-	context.strokeStyle = "#BBBBBB";
-	context.stroke();
+    context.strokeStyle = "#BBBBBB";
+    context.stroke();
 }
 
 function drawSidePanels() {
