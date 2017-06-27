@@ -58,14 +58,15 @@ let current_piece = {
     active: false,
     clearing: false,
     coords: [],
-    has_moved: false,
     origin: [],
     ghost_coords: [],
     color: EMPTY,
 }
 
-// Queue of coordinates to be cleared on the next draw. 
+// Queue of pieces to be cleared on the next tick
 let clear_queue = [];
+// Queue of pieces to be drawn on the next tick
+let draw_queue = [];
 
 // Array of rows that were previously cleared
 let cleared_rows = [];
@@ -157,11 +158,17 @@ function nextTick() {
 
     calculateCurrentPieceGhost();
 
-    if (current_piece.has_moved && current_piece.active) { 
-        clearPieces();
-        drawCurrentPiece(); 
-        current_piece.has_moved = false;
-    }
+    // Clear according to clear_queue
+    clearPieces();
+    // Draw according to draw_queue
+    drawPieces();
+
+    //if (current_piece.has_moved && current_piece.active) { 
+    //    clearPieces();
+    //    drawPieces();
+    //    //drawCurrentPiece(); 
+    //    //current_piece.has_moved = false;
+    //}
 }
 
 // Calculate ghost position
@@ -226,13 +233,15 @@ function spawnTetromino() {
 
     // Set current piece properties based on which tetromino is being spawned
     let tetromino = TETROMINOES[this_piece_index];
-    current_piece.has_moved = true;
     current_piece.coords = tetromino.coords;
     // TODO: what to use here?
     current_piece.origin = new Array(tetromino.origin[0], tetromino.origin[1]);
     current_piece.color = tetromino.color;
     current_piece.type = tetromino.name;
     current_piece.active = true;
+
+    draw_queue.push(current_piece.coords);
+    draw_queue.push(current_piece.color);
 }
 
 function extendBag() {
@@ -280,7 +289,8 @@ function rotateLeft() {
     // TODO: Optimize by keeping spaces that are removed then added?
     clearCurrentPiece();
     current_piece.coords = moved_piece;
-    current_piece.has_moved = true;
+    draw_queue.push(current_piece.coords);
+    draw_queue.push(current_piece.color);
 }
 
 function rotateRight() {
@@ -314,7 +324,8 @@ function rotateRight() {
     // TODO: Optimize by keeping spaces that are removed then added?
     clearCurrentPiece();
     current_piece.coords = moved_piece;
-    current_piece.has_moved = true;
+    draw_queue.push(current_piece.coords);
+    draw_queue.push(current_piece.color);
 }
 
 function moveTetromino(roffset, coffset) {
@@ -352,7 +363,8 @@ function moveTetromino(roffset, coffset) {
     clearCurrentPiece();
 
     current_piece.coords = moved_piece;
-    current_piece.has_moved = true;
+    draw_queue.push(current_piece.coords);
+    draw_queue.push(current_piece.color);
 }
 
 // Makes current piece inactive
@@ -366,7 +378,9 @@ function deactivatePiece() {
         inactive_pieces[current_piece.coords[k][0]][current_piece.coords[k][1]] 
                 = current_piece.color;
         // Ensure piece visibility
-        drawCurrentPiece();
+        draw_queue.push(current_piece.coords);
+        draw_queue.push(current_piece.color);
+
         // Game is only ended if the piece is deactivated 
         //	above the buffer; that is, no cells of the piece
         //	are below the buffer
@@ -446,6 +460,14 @@ function clearRow(cleared_row) {
 }
 
 /*Canvas functions------------------------------------------------------------*/
+
+function drawPieces() {
+    let next;
+    while ((next = draw_queue.shift()) != undefined) {
+        let color = draw_queue.shift();
+        drawPiece(next, color);
+    }
+}
 
 // Clear pieces that have been put into the clear_queue 
 function clearPieces() {
