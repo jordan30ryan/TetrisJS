@@ -64,6 +64,9 @@ let current_piece = {
     color: EMPTY,
 }
 
+// Queue of coordinates to be cleared on the next draw. 
+let clear_queue = [];
+
 // Array of rows that were previously cleared
 let cleared_rows = [];
 // The tick at which the next clear will happen
@@ -105,11 +108,11 @@ document.addEventListener('keydown', function(event) {
     // block input if in the middle of clearing 
     if (current_piece.clearing) return;
     // UP
-    if(event.keyCode == 38) {
+    else if(event.keyCode == 38) {
         hardDrop();
     }
     // LEFT
-    if(event.keyCode == 37) {
+    else if(event.keyCode == 37) {
         moveTetromino(0, -1);
     }
     // RIGHT
@@ -134,13 +137,14 @@ function play() {
 
 function nextTick() {
     tick++;
-    // If there's something to shift down and it's at least the tick
+    // If there are lines to shift down and it's at least the tick
     //	at which lines drop
     if (cleared_rows.length > 0 && tick >= next_clear_tick) {
         moveDownRows();
         current_piece.clearing = false;
     }
-    // If rows are being cleared
+    // If rows are being cleared, wait for the tick at which the line
+    //  clear animation finishes
     else if (current_piece.clearing) {
         return;
     }
@@ -154,6 +158,7 @@ function nextTick() {
     calculateCurrentPieceGhost();
 
     if (current_piece.has_moved && current_piece.active) { 
+        clearPieces();
         drawCurrentPiece(); 
         current_piece.has_moved = false;
     }
@@ -199,7 +204,8 @@ function spawnTetromino() {
     if (piece_bag.length < 2) extendBag();
 
     // Clear next piece preview
-    clearPiece(TETROMINOES[piece_bag[0]].next_coords);
+    //clearPiece(TETROMINOES[piece_bag[0]].next_coords);
+    clear_queue.push(TETROMINOES[piece_bag[0]].next_coords);
 
     //next_piece_index = Math.floor(Math.random() * 7);
     let this_piece_index = piece_bag.shift();
@@ -241,7 +247,9 @@ function extendBag() {
     piece_bag = piece_bag.concat(new_bag);
 }
 
+// TODO: Combine rotation functions? Essentially the same.
 function rotateLeft() {
+    // O block does not rotate, don't bother with calculations
     if (current_piece.type == "O") return;
     let origin = current_piece.origin;
 
@@ -439,6 +447,14 @@ function clearRow(cleared_row) {
 
 /*Canvas functions------------------------------------------------------------*/
 
+// Clear pieces that have been put into the clear_queue 
+function clearPieces() {
+    let next;
+    while ((next = clear_queue.shift()) != undefined) {
+        clearPiece(next);
+    }
+}
+
 // coords are the 4 coordinates of the blocks that make up the piece
 //  [[r,c],[],[],[]]
 // type is the type of block (string with color as in "#FFFFFF")
@@ -461,8 +477,10 @@ function drawCurrentPiece() {
 }
 
 function clearCurrentPiece() {
-    clearPiece(current_piece.coords);
-    clearPiece(current_piece.ghost_coords);
+    //clearPiece(current_piece.coords);
+    //clearPiece(current_piece.ghost_coords);
+    clear_queue.push(current_piece.coords);
+    clear_queue.push(current_piece.ghost_coords);
 }
 
 function colorCell(coords, color) {
