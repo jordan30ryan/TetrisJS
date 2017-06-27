@@ -108,25 +108,27 @@ window.onload = function() {
 document.addEventListener('keydown', function(event) {
     // block input if in the middle of clearing 
     if (current_piece.clearing) return;
-    // UP
-    else if(event.keyCode == 38) {
-        hardDrop();
-    }
-    // LEFT
-    else if(event.keyCode == 37) {
-        moveTetromino(0, -1);
-    }
-    // RIGHT
-    else if(event.keyCode == 39) {
-        moveTetromino(0,1);
-    }
-    // ROTATE L
-    else if (event.keyCode == 90) {
-        rotateLeft();
-    }
-    // ROTATE R
-    else if (event.keyCode == 88) {
-        rotateRight();
+    switch (event.keyCode) {
+	case 38:
+            // UP
+	    hardDrop();
+            break;	
+	case 37:
+            //LEFT
+            moveTetromino(0, -1);
+            break;
+	case 39:
+            //RIGHT
+            moveTetromino(0,1);
+            break;
+	case 90:
+            // Z
+            rotateLeft();
+            break;
+	case 88:
+            // X
+            rotateRight();
+            break;
     }
 });
 
@@ -162,13 +164,6 @@ function nextTick() {
     clearPieces();
     // Draw according to draw_queue
     drawPieces();
-
-    //if (current_piece.has_moved && current_piece.active) { 
-    //    clearPieces();
-    //    drawPieces();
-    //    //drawCurrentPiece(); 
-    //    //current_piece.has_moved = false;
-    //}
 }
 
 // Calculate ghost position
@@ -210,23 +205,11 @@ function moveActiveTetromino() {
 function spawnTetromino() {
     if (piece_bag.length < 2) extendBag();
 
-    // Clear next piece preview
-    //clearPiece(TETROMINOES[piece_bag[0]].next_coords);
     clear_queue.push(TETROMINOES[piece_bag[0]].next_coords);
 
     //next_piece_index = Math.floor(Math.random() * 7);
     let this_piece_index = piece_bag.shift();
     let next_piece_index = piece_bag[0];
-
-    
-
-    //  else {
-    //      // Clear next piece preview
-    //      clearPiece(TETROMINOES[next_piece_index].next_coords);
-
-    //      this_piece_index = next_piece_index;
-    //      next_piece_index = Math.floor(Math.random() * 7);
-    //  }
 
     // Draw next piece preview
     drawPiece(TETROMINOES[next_piece_index].next_coords, TETROMINOES[next_piece_index].color);
@@ -285,7 +268,6 @@ function rotateLeft() {
         moved_piece[k] = [Math.floor(row), Math.floor(col)];
     }
 
-    // Remove current piece to redraw
     // TODO: Optimize by keeping spaces that are removed then added?
     clearCurrentPiece();
     current_piece.coords = moved_piece;
@@ -320,7 +302,6 @@ function rotateRight() {
         moved_piece[k] = [row, col];
     }
 
-    // Remove current piece to redraw
     // TODO: Optimize by keeping spaces that are removed then added?
     clearCurrentPiece();
     current_piece.coords = moved_piece;
@@ -358,13 +339,16 @@ function moveTetromino(roffset, coffset) {
     }
     current_piece.origin[0] += roffset;
     current_piece.origin[1] += coffset;
-    // Remove current piece to redraw
     // TODO: Optimize by keeping spaces that are removed then added?
     clearCurrentPiece();
 
     current_piece.coords = moved_piece;
-    draw_queue.push(current_piece.coords);
-    draw_queue.push(current_piece.color);
+    drawCurrentPiece();
+    calculateCurrentPieceGhost();
+
+    //draw_queue.push(current_piece.coords);
+    //draw_queue.push(current_piece.color);
+    
 }
 
 // Makes current piece inactive
@@ -378,8 +362,9 @@ function deactivatePiece() {
         inactive_pieces[current_piece.coords[k][0]][current_piece.coords[k][1]] 
                 = current_piece.color;
         // Ensure piece visibility
-        draw_queue.push(current_piece.coords);
-        draw_queue.push(current_piece.color);
+        //draw_queue.push(current_piece.coords);
+        //draw_queue.push(current_piece.color);
+        drawCurrentPiece();
 
         // Game is only ended if the piece is deactivated 
         //	above the buffer; that is, no cells of the piece
@@ -494,8 +479,12 @@ function clearPiece(coords) {
 
 function drawCurrentPiece() {
     // Draw ghost first, then draw current piece on top
-    drawPiece(current_piece.ghost_coords, GHOST_COLOR);
-    drawPiece(current_piece.coords, current_piece.color);
+    //drawPiece(current_piece.ghost_coords, GHOST_COLOR);
+    //drawPiece(current_piece.coords, current_piece.color);
+    draw_queue.push(current_piece.ghost_coords); 
+    draw_queue.push(GHOST_COLOR);
+    draw_queue.push(current_piece.coords); 
+    draw_queue.push(current_piece.color);
 }
 
 function clearCurrentPiece() {
