@@ -48,7 +48,7 @@ const EMPTY = "#FFFFFF"
 const GHOST_COLOR = "#CCCCCC";
 
 // Number of ticks before a piece moves down a row
-let FALL_RATE = 30;
+let FALL_RATE = 15;
 
 // 2d array representing the inactive pieces with the colors of every square
 let inactive_pieces = [];
@@ -63,9 +63,8 @@ let current_piece = {
     color: EMPTY,
 }
 
-// Queue of pieces to be cleared on the next tick
-let clear_queue = [];
-// Queue of pieces to be drawn on the next tick
+// Queue of pieces to be drawn or removed on the next tick
+// Formatted as coords [[][][][]] followed by the color to draw or EMPTY to clear
 let draw_queue = [];
 
 // Array of rows that were previously cleared
@@ -139,6 +138,9 @@ function play() {
 }
 
 function nextTick() {
+    // Draw according to draw_queue
+    drawPieces();
+
     tick++;
     // If there are lines to shift down and it's at least the tick
     //	at which lines drop
@@ -158,12 +160,8 @@ function nextTick() {
         spawnTetromino();
     }
 
-    calculateCurrentPieceGhost();
-
-    // Clear according to clear_queue
-    clearPieces();
     // Draw according to draw_queue
-    drawPieces();
+    //drawPieces();
 }
 
 // Calculate ghost position
@@ -190,7 +188,7 @@ function calculateCurrentPieceGhost() {
 }
 
 function hardDrop() {
-    clearCurrentPiece();
+    queueCurrentPieceClear();
     current_piece.coords = current_piece.ghost_coords;
     deactivatePiece();
 }
@@ -205,14 +203,17 @@ function moveActiveTetromino() {
 function spawnTetromino() {
     if (piece_bag.length < 2) extendBag();
 
-    clear_queue.push(TETROMINOES[piece_bag[0]].next_coords);
+    //clear_queue.push(TETROMINOES[piece_bag[0]].next_coords);
+    draw_queue.push(TETROMINOES[piece_bag[0]].next_coords);
+    draw_queue.push(EMPTY);
 
     //next_piece_index = Math.floor(Math.random() * 7);
     let this_piece_index = piece_bag.shift();
     let next_piece_index = piece_bag[0];
 
     // Draw next piece preview
-    drawPiece(TETROMINOES[next_piece_index].next_coords, TETROMINOES[next_piece_index].color);
+    draw_queue.push(TETROMINOES[next_piece_index].next_coords);
+    draw_queue.push(TETROMINOES[next_piece_index].color);
 
     // Set current piece properties based on which tetromino is being spawned
     let tetromino = TETROMINOES[this_piece_index];
@@ -223,8 +224,9 @@ function spawnTetromino() {
     current_piece.type = tetromino.name;
     current_piece.active = true;
 
-    draw_queue.push(current_piece.coords);
-    draw_queue.push(current_piece.color);
+    calculateCurrentPieceGhost()
+
+    queueCurrentPieceDraw();
 }
 
 function extendBag() {
@@ -268,11 +270,11 @@ function rotateLeft() {
         moved_piece[k] = [Math.floor(row), Math.floor(col)];
     }
 
-    // TODO: Optimize by keeping spaces that are removed then added?
-    clearCurrentPiece();
+    queueCurrentPieceClear();
+
     current_piece.coords = moved_piece;
-    draw_queue.push(current_piece.coords);
-    draw_queue.push(current_piece.color);
+    calculateCurrentPieceGhost();
+    queueCurrentPieceDraw();
 }
 
 function rotateRight() {
@@ -302,11 +304,11 @@ function rotateRight() {
         moved_piece[k] = [row, col];
     }
 
-    // TODO: Optimize by keeping spaces that are removed then added?
-    clearCurrentPiece();
+    queueCurrentPieceClear();
+
     current_piece.coords = moved_piece;
-    draw_queue.push(current_piece.coords);
-    draw_queue.push(current_piece.color);
+    calculateCurrentPieceGhost();
+    queueCurrentPieceDraw();
 }
 
 function moveTetromino(roffset, coffset) {
@@ -339,16 +341,13 @@ function moveTetromino(roffset, coffset) {
     }
     current_piece.origin[0] += roffset;
     current_piece.origin[1] += coffset;
+
     // TODO: Optimize by keeping spaces that are removed then added?
-    clearCurrentPiece();
+    queueCurrentPieceClear();
 
     current_piece.coords = moved_piece;
-    drawCurrentPiece();
     calculateCurrentPieceGhost();
-
-    //draw_queue.push(current_piece.coords);
-    //draw_queue.push(current_piece.color);
-    
+    queueCurrentPieceDraw();
 }
 
 // Makes current piece inactive
@@ -361,11 +360,7 @@ function deactivatePiece() {
     for (let k in current_piece.coords) {
         inactive_pieces[current_piece.coords[k][0]][current_piece.coords[k][1]] 
                 = current_piece.color;
-        // Ensure piece visibility
-        //draw_queue.push(current_piece.coords);
-        //draw_queue.push(current_piece.color);
-        drawCurrentPiece();
-
+        
         // Game is only ended if the piece is deactivated 
         //	above the buffer; that is, no cells of the piece
         //	are below the buffer
@@ -374,6 +369,9 @@ function deactivatePiece() {
             unique_rows.push(current_piece.coords[k][0]);
         }
     }
+
+    // Ensure piece visibility
+    queueCurrentPieceDraw();
 
     current_piece.active = false;
 
@@ -425,10 +423,15 @@ function moveDownRows() {
             for (let col = 0; col < MAX_COLS; col++) {
                 inactive_pieces[row][col] = inactive_pieces[row-1][col];
                 if (inactive_pieces[row][col] == EMPTY) {
-                    clearCell([row, col]);
+                    //clearCell([row, col]);
+                    // TODO: Work around
+                    draw_queue.push([[row, col]])
+                    draw_queue.push(EMPTY);
                 } 
                 else {
-                    colorCell([row, col], inactive_pieces[row][col]);
+                    //colorCell([row, col], inactive_pieces[row][col]);
+                    draw_queue.push([[row, col]])
+                    draw_queue.push(inactive_pieces[row][col]);
                 }
             }
         }
@@ -440,7 +443,9 @@ function clearRow(cleared_row) {
     console.log("clearing row" + cleared_row);
     for (let col = 0; col < MAX_COLS; col++) {
         inactive_pieces[cleared_row][col] = EMPTY;
-        clearCell([cleared_row, col]);
+        draw_queue.push([[cleared_row, col]])
+        draw_queue.push(EMPTY);
+        //clearCell([cleared_row, col]);
     }
 }
 
@@ -450,15 +455,8 @@ function drawPieces() {
     let next;
     while ((next = draw_queue.shift()) != undefined) {
         let color = draw_queue.shift();
-        drawPiece(next, color);
-    }
-}
-
-// Clear pieces that have been put into the clear_queue 
-function clearPieces() {
-    let next;
-    while ((next = clear_queue.shift()) != undefined) {
-        clearPiece(next);
+        if (color == EMPTY) clearPiece(next);
+        else drawPiece(next, color);
     }
 }
 
@@ -477,21 +475,20 @@ function clearPiece(coords) {
     }
 }
 
-function drawCurrentPiece() {
+function queueCurrentPieceDraw() {
     // Draw ghost first, then draw current piece on top
-    //drawPiece(current_piece.ghost_coords, GHOST_COLOR);
-    //drawPiece(current_piece.coords, current_piece.color);
+    // TODO: Skip overlap
     draw_queue.push(current_piece.ghost_coords); 
     draw_queue.push(GHOST_COLOR);
     draw_queue.push(current_piece.coords); 
     draw_queue.push(current_piece.color);
 }
 
-function clearCurrentPiece() {
-    //clearPiece(current_piece.coords);
-    //clearPiece(current_piece.ghost_coords);
-    clear_queue.push(current_piece.coords);
-    clear_queue.push(current_piece.ghost_coords);
+function queueCurrentPieceClear() {
+    draw_queue.push(current_piece.coords);
+    draw_queue.push(EMPTY);
+    draw_queue.push(current_piece.ghost_coords);
+    draw_queue.push(EMPTY);
 }
 
 function colorCell(coords, color) {
