@@ -423,13 +423,11 @@ function moveDownRows() {
             for (let col = 0; col < MAX_COLS; col++) {
                 inactive_pieces[row][col] = inactive_pieces[row-1][col];
                 if (inactive_pieces[row][col] == EMPTY) {
-                    //clearCell([row, col]);
-                    // TODO: Work around
+                    // TODO: Simplify this code
                     draw_queue.push([[row, col]])
                     draw_queue.push(EMPTY);
                 } 
                 else {
-                    //colorCell([row, col], inactive_pieces[row][col]);
                     draw_queue.push([[row, col]])
                     draw_queue.push(inactive_pieces[row][col]);
                 }
