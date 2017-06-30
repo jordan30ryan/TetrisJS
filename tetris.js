@@ -110,27 +110,27 @@ document.addEventListener('keydown', function(event) {
     // block input if in the middle of clearing 
     if (current_piece.clearing) return;
     switch (event.keyCode) {
-    case 38:
-        // UP
-        hardDrop();
-        break;
-    case 37:
-        //LEFT
-        moveTetromino(0, -1);
-        break;
-    case 39:
-        //RIGHT
-        moveTetromino(0,1);
-        break;
-    case 90:
-        // Z
-        rotateLeft();
-        break;
-    case 88:
-        // X
-        rotateRight();
-        break;
-    }
+        case 38:
+            // UP
+            hardDrop();
+            break;
+        case 37:
+            //LEFT
+            moveTetromino(0, -1);
+            break;
+        case 39:
+            //RIGHT
+            moveTetromino(0,1);
+            break;
+        case 90:
+            // Z
+            rotateLeft();
+            break;
+        case 88:
+            // X
+            rotateRight();
+            break;
+        }
 });
 
 /*Game Functions--------------------------------------------------------------*/
@@ -393,7 +393,9 @@ function deactivatePiece() {
 // TODO: Optimize row clearing
 // Check for cleared rows
 function checkRows(unique_rows) {
-    unique_rows.sort();
+    //unique_rows.sort();
+    // sort numerically instead of lexographically
+    unique_rows.sort(function(a,b){return a - b;});
     cleared_rows = [];
     for (let r in unique_rows) {
         let row = unique_rows[r];
@@ -428,15 +430,15 @@ function moveDownRows() {
         // Iterate up the rows that get shifted down
         for (let row = cleared_row; row > 1; row--) {
             for (let col = 0; col < MAX_COLS; col++) {
+                //console.log("r"+row+"_c"+col+"_status"+inactive_pieces[row][col]);
                 inactive_pieces[row][col] = inactive_pieces[row-1][col];
+                //console.log("r"+row+"_c"+col+"_status"+inactive_pieces[row][col]);
                 if (inactive_pieces[row][col] == EMPTY) {
-                    //clearCell([row, col]);
-                    // TODO: Work around
+                    // TODO: Simplify this code
                     draw_queue.push([[row, col]])
                     draw_queue.push(EMPTY);
                 } 
                 else {
-                    //colorCell([row, col], inactive_pieces[row][col]);
                     draw_queue.push([[row, col]])
                     draw_queue.push(inactive_pieces[row][col]);
                 }
@@ -537,9 +539,9 @@ function drawGrid() {
 
     // Draw verticals
     for (let pixcol = start_pos[1]; 
-			colCount <= MAX_COLS; 
-			pixcol += GRID_PIXEL_SIZE, colCount++) {
-			
+            colCount <= MAX_COLS; 
+            pixcol += GRID_PIXEL_SIZE, colCount++) {
+
         context.moveTo(pixcol, start_pos[0]);
         context.lineTo(pixcol, boardHeight);
     }
