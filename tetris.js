@@ -19,7 +19,7 @@ let boardWidth = start_pos[1] + GRID_PIXEL_SIZE * MAX_COLS;
 
 // Time in ms between each tick 
 // 16ms - 60Hz
-const TICK_DELAY = 16;
+const TICK_DELAY = 16.66;
 let tick = 0;
 
 let gameLoopId;
@@ -48,7 +48,8 @@ const EMPTY = "#FFFFFF"
 const GHOST_COLOR = "#CCCCCC";
 
 // Number of ticks before a piece moves down a row
-let FALL_RATE = 15;
+const DEFAULT_FALL_RATE = 60;
+const SOFT_FALL_RATE = 3;
 
 // 2d array representing the inactive pieces with the colors of every square
 let inactive_pieces = [];
@@ -84,6 +85,12 @@ let score = {
     lines_cleared: 0
 };
 
+let key_state = {
+    soft_drop: false,
+    left: false,
+    right: false
+};
+
 /*Page Functions--------------------------------------------------------------*/
 
 window.onload = function() {
@@ -115,6 +122,10 @@ document.addEventListener('keydown', function(event) {
     // block input if in the middle of clearing 
     if (current_piece.clearing) return;
     switch (event.keyCode) {
+        case 40:
+            // Down (Soft Drop)
+            key_state.soft_drop = true;
+            break;
         case 38:
             // UP
             hardDrop();
@@ -138,6 +149,14 @@ document.addEventListener('keydown', function(event) {
         }
 });
 
+document.addEventListener('keyup', function(event) {
+    switch (event.keyCode) {
+        case 40:
+            key_state.soft_drop = false;
+            break;
+    }
+});
+
 /*Game Functions--------------------------------------------------------------*/
 
 function play() {
@@ -145,6 +164,7 @@ function play() {
 }
 
 function nextTick() {
+    tick++;
     // Draw according to draw_queue
     drawPieces();
 
@@ -204,7 +224,7 @@ function hardDrop() {
 }
 
 function moveActiveTetromino() {
-    if ((tick+1) % FALL_RATE == 0) {
+    if ((tick+1) % (key_state.soft_drop ? SOFT_FALL_RATE : DEFAULT_FALL_RATE) == 0) {
         // move tetromino down 1 row
         moveTetromino(1, 0);
     }
@@ -538,7 +558,6 @@ function drawScore() {
 }
 
 function drawTimer() {
-    tick++;
     time_elapsed += TICK_DELAY;
     let seconds = (time_elapsed / 1000) % 60;
     let minutes = Math.floor((time_elapsed / 1000) / 60);
