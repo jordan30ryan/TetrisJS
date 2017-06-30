@@ -531,7 +531,7 @@ function drawScore() {
     text = "Lines Cleared: " + score.lines_cleared;
     context.fillStyle = "#000000";
     context.font = "30px Arial";
-    context.clearRect(0, GRID_PIXEL_SIZE * MAX_ROWS, -100, -100);
+    context.clearRect(0, GRID_PIXEL_SIZE * MAX_ROWS - 30, GRID_PIXEL_SIZE * MAX_COLS, 30);
     context.fillText(text, 0, GRID_PIXEL_SIZE * MAX_ROWS);
     //context.fillText(text, 0, 880);
 
@@ -546,9 +546,8 @@ function drawTimer() {
     let text = minutes + ":" + (seconds > 10 ? "" : "0") + seconds.toFixed(2);
     context.fillStyle = "#000000";
     context.font = "30px Arial";
-    //context.fillText(text, GRID_PIXEL_SIZE * MAX_ROWS, 0);
-    //context.clearRect(0, 880, 200, 100);
-    //context.fillText(text, 0, 880);
+    context.clearRect(0, GRID_PIXEL_SIZE * MAX_ROWS - 60, GRID_PIXEL_SIZE * MAX_COLS, 30);
+    context.fillText(text, 0, GRID_PIXEL_SIZE * MAX_ROWS - 30);
 }
 
 function drawGrid() {
