@@ -77,6 +77,8 @@ let CLEAR_TICK_DELAY = 10;
 // Bag of pieces to be used
 let piece_bag = [];
 
+let time_elapsed = 0;	// ms
+
 /*Page Functions--------------------------------------------------------------*/
 
 window.onload = function() {
@@ -108,26 +110,26 @@ document.addEventListener('keydown', function(event) {
     // block input if in the middle of clearing 
     if (current_piece.clearing) return;
     switch (event.keyCode) {
-	case 38:
-            // UP
-	    hardDrop();
-            break;	
-	case 37:
-            //LEFT
-            moveTetromino(0, -1);
-            break;
-	case 39:
-            //RIGHT
-            moveTetromino(0,1);
-            break;
-	case 90:
-            // Z
-            rotateLeft();
-            break;
-	case 88:
-            // X
-            rotateRight();
-            break;
+    case 38:
+        // UP
+        hardDrop();
+        break;
+    case 37:
+        //LEFT
+        moveTetromino(0, -1);
+        break;
+    case 39:
+        //RIGHT
+        moveTetromino(0,1);
+        break;
+    case 90:
+        // Z
+        rotateLeft();
+        break;
+    case 88:
+        // X
+        rotateRight();
+        break;
     }
 });
 
@@ -142,6 +144,11 @@ function nextTick() {
     drawPieces();
 
     tick++;
+    time_elapsed += TICK_DELAY;
+    let seconds = (time_elapsed / 1000) % 60;
+    let minutes = Math.floor((time_elapsed / 1000) / 60);
+    console.log(minutes + ":" + (seconds > 10 ? "" : "0") + seconds.toFixed(2));
+
     // If there are lines to shift down and it's at least the tick
     //	at which lines drop
     if (cleared_rows.length > 0 && tick >= next_clear_tick) {
