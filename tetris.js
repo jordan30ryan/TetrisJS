@@ -79,6 +79,11 @@ let piece_bag = [];
 
 let time_elapsed = 0;	// ms
 
+
+let score = {
+    lines_cleared: 0
+};
+
 /*Page Functions--------------------------------------------------------------*/
 
 window.onload = function() {
@@ -143,11 +148,9 @@ function nextTick() {
     // Draw according to draw_queue
     drawPieces();
 
-    tick++;
-    time_elapsed += TICK_DELAY;
-    let seconds = (time_elapsed / 1000) % 60;
-    let minutes = Math.floor((time_elapsed / 1000) / 60);
-    console.log(minutes + ":" + (seconds > 10 ? "" : "0") + seconds.toFixed(2));
+    drawScore();
+
+    drawTimer();
 
     // If there are lines to shift down and it's at least the tick
     //	at which lines drop
@@ -408,6 +411,7 @@ function checkRows(unique_rows) {
             }
         }
         if (row_cleared) {
+            score.lines_cleared++;
             cleared_rows.push(row);
             clearRow(row);
         }
@@ -520,6 +524,31 @@ function clearCell(coords) {
     let startRow = rowCoord * GRID_PIXEL_SIZE + start_pos[0] + 1; 
     let startCol = coords[1] * GRID_PIXEL_SIZE + start_pos[1] + 1;
     context.clearRect(startCol, startRow, GRID_PIXEL_SIZE - 2, GRID_PIXEL_SIZE - 2);
+}
+
+
+function drawScore() {
+    text = "Lines Cleared: " + score.lines_cleared;
+    context.fillStyle = "#000000";
+    context.font = "30px Arial";
+    context.clearRect(0, GRID_PIXEL_SIZE * MAX_ROWS, -100, -100);
+    context.fillText(text, 0, GRID_PIXEL_SIZE * MAX_ROWS);
+    //context.fillText(text, 0, 880);
+
+}
+
+function drawTimer() {
+    tick++;
+    time_elapsed += TICK_DELAY;
+    let seconds = (time_elapsed / 1000) % 60;
+    let minutes = Math.floor((time_elapsed / 1000) / 60);
+    //console.log(minutes + ":" + (seconds > 10 ? "" : "0") + seconds.toFixed(2));
+    let text = minutes + ":" + (seconds > 10 ? "" : "0") + seconds.toFixed(2);
+    context.fillStyle = "#000000";
+    context.font = "30px Arial";
+    //context.fillText(text, GRID_PIXEL_SIZE * MAX_ROWS, 0);
+    //context.clearRect(0, 880, 200, 100);
+    //context.fillText(text, 0, 880);
 }
 
 function drawGrid() {
