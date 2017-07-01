@@ -18,9 +18,9 @@ let boardWidth = start_pos[1] + GRID_PIXEL_SIZE * MAX_COLS;
 /*Game Variables--------------------------------------------------------------*/
 
 // Time in ms between each tick 
-// 16ms - 60Hz
+// 16.66ms - 60Hz
 const TICK_DELAY = 16.66;
-let tick = 0;
+let tick = 1;
 
 let gameLoopId;
 
@@ -50,6 +50,12 @@ const GHOST_COLOR = "#CCCCCC";
 // Number of ticks before a piece moves down a row
 const DEFAULT_FALL_RATE = 60;
 const SOFT_FALL_RATE = 3;
+
+// Number of ticks before moving to the left or right when holding down
+const MOVE_HOLD_INITIAL_DELAY = 9;
+// Number of ticks before moving to the left or right multiple times when holding down
+//  (After the MOVE_HOLD_INITIAL_DELAY is over) 
+const MOVE_HOLD_DELAY = 2;
 
 // 2d array representing the inactive pieces with the colors of every square
 let inactive_pieces = [];
@@ -85,10 +91,12 @@ let score = {
     lines_cleared: 0
 };
 
-let key_state = {
+let key_hold_state = {
     soft_drop: false,
     left: false,
-    right: false
+    left_delay: 0,
+    right: false,
+    right_delay: 0
 };
 
 /*Page Functions--------------------------------------------------------------*/
@@ -124,7 +132,7 @@ document.addEventListener('keydown', function(event) {
     switch (event.keyCode) {
         case 40:
             // Down (Soft Drop)
-            key_state.soft_drop = true;
+            key_hold_state.soft_drop = true;
             break;
         case 38:
             // UP
@@ -132,11 +140,23 @@ document.addEventListener('keydown', function(event) {
             break;
         case 37:
             //LEFT
-            moveTetromino(0, -1);
+            if (!key_hold_state.left) {
+                console.log("LEFT DOWN");
+                moveTetromino(0, -1);
+                key_hold_state.left = true;
+                key_hold_state.right = false;
+                key_hold_state.left_delay = MOVE_HOLD_INITIAL_DELAY;
+            }
             break;
         case 39:
             //RIGHT
-            moveTetromino(0,1);
+            if (!key_hold_state.right) {
+                console.log("RIGHT DOWN");
+                moveTetromino(0,1);
+                key_hold_state.right = true;
+                key_hold_state.left = false;
+                key_hold_state.right_delay = MOVE_HOLD_INITIAL_DELAY;
+            }
             break;
         case 90:
             // Z
@@ -152,7 +172,21 @@ document.addEventListener('keydown', function(event) {
 document.addEventListener('keyup', function(event) {
     switch (event.keyCode) {
         case 40:
-            key_state.soft_drop = false;
+            // DOWN
+            key_hold_state.soft_drop = false;
+            break;
+        case 37:
+            // LEFT
+            console.log("LEFT UP");
+            key_hold_state.left = false;
+            key_hold_state.left_delay = 0;
+
+            break;
+        case 39:
+            // RIGHT
+            console.log("RIGHT UP");
+            key_hold_state.right = false;
+            key_hold_state.right_delay = 0;
             break;
     }
 });
@@ -168,9 +202,10 @@ function nextTick() {
     // Draw according to draw_queue
     drawPieces();
 
-    drawScore();
+    // TODO: Improve performance of drawing text/numbers
+    //drawScore();
 
-    drawTimer();
+    //drawTimer();
 
     // If there are lines to shift down and it's at least the tick
     //	at which lines drop
@@ -224,9 +259,18 @@ function hardDrop() {
 }
 
 function moveActiveTetromino() {
-    if ((tick+1) % (key_state.soft_drop ? SOFT_FALL_RATE : DEFAULT_FALL_RATE) == 0) {
+    if (tick % (key_hold_state.soft_drop ? SOFT_FALL_RATE : DEFAULT_FALL_RATE) == 0) {
         // move tetromino down 1 row
         moveTetromino(1, 0);
+    }
+    // TODO: Implement timing delays (if needed)
+    if (key_hold_state.left && key_hold_state.left_delay-- < 0) {
+        moveTetromino(0, -1);
+        key_hold_state.left_delay = MOVE_HOLD_DELAY;
+    }
+    else if (key_hold_state.right && key_hold_state.right_delay-- < 0) {
+        moveTetromino(0, 1);
+        key_hold_state.right_delay = MOVE_HOLD_DELAY;
     }
 }
 
