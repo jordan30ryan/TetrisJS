@@ -128,7 +128,7 @@ window.onload = function() {
 
 document.addEventListener('keydown', function(event) {
     // block input if in the middle of clearing 
-    if (current_piece.clearing) return;
+    //if (current_piece.clearing) return;
     switch (event.keyCode) {
         case 40:
             // Down (Soft Drop)
@@ -147,6 +147,7 @@ document.addEventListener('keydown', function(event) {
                 key_hold_state.right = false;
                 key_hold_state.left_delay = MOVE_HOLD_INITIAL_DELAY;
             }
+            else console.log("LEFT ALREADY HELD");
             break;
         case 39:
             //RIGHT
@@ -157,6 +158,7 @@ document.addEventListener('keydown', function(event) {
                 key_hold_state.left = false;
                 key_hold_state.right_delay = MOVE_HOLD_INITIAL_DELAY;
             }
+            else console.log("RIGHT ALREADY HELD");
             break;
         case 90:
             // Z
@@ -166,7 +168,7 @@ document.addEventListener('keydown', function(event) {
             // X
             rotateRight();
             break;
-        }
+    }
 });
 
 document.addEventListener('keyup', function(event) {
@@ -199,6 +201,11 @@ function play() {
 
 function nextTick() {
     tick++;
+
+    // Decrement movement hold delays
+    if (key_hold_state.left) key_hold_state.left_delay--;
+    else if (key_hold_state.right) key_hold_state.right_delay--;
+
     // Draw according to draw_queue
     drawPieces();
 
@@ -263,12 +270,13 @@ function moveActiveTetromino() {
         // move tetromino down 1 row
         moveTetromino(1, 0);
     }
-    // TODO: Implement timing delays (if needed)
-    if (key_hold_state.left && key_hold_state.left_delay-- < 0) {
+    // Move if delay is < 0, decrement delay
+    // Reset hold delay to the delay between movements (MOVE_HOLD_DELAY)
+    if (key_hold_state.left && key_hold_state.left_delay < 0) {
         moveTetromino(0, -1);
         key_hold_state.left_delay = MOVE_HOLD_DELAY;
     }
-    else if (key_hold_state.right && key_hold_state.right_delay-- < 0) {
+    else if (key_hold_state.right && key_hold_state.right_delay < 0) {
         moveTetromino(0, 1);
         key_hold_state.right_delay = MOVE_HOLD_DELAY;
     }
