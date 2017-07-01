@@ -162,11 +162,13 @@ document.addEventListener('keydown', function(event) {
             break;
         case 90:
             // Z
-            rotateLeft();
+            // Rotate left
+            rotate(1);
             break;
         case 88:
             // X
-            rotateRight();
+            // Rotate right
+            rotate(-1);
             break;
     }
 });
@@ -323,22 +325,28 @@ function extendBag() {
     piece_bag = piece_bag.concat(new_bag);
 }
 
-// TODO: Combine rotation functions? Essentially the same.
-function rotateLeft() {
+// Rotation of piece about piece's origin. 
+// Direction: 1 for right, -1 for left
+function rotate(direction) {
     // O block does not rotate, don't bother with calculations
     if (current_piece.type == "O") return;
     let origin = current_piece.origin;
 
     let moved_piece = [];
     for (let k in current_piece.coords) {
-        let temp = []
-            temp[0] = current_piece.coords[k][0] - origin[0];
+        let temp = [];
+        temp[0] = current_piece.coords[k][0] - origin[0];
         temp[1] = current_piece.coords[k][1] - origin[1];
         // 90 degree rotation matrix
         //[0 -1]
         //[1  0]
-        let row = -1 * temp[1] + origin[0];
-        let col = temp[0] + origin[1];
+        // -90 degree rotation matrix
+        //[0  1]
+        //[-1 0]
+        // if left (direction=1), temp[1] is mult. by -1 and temp[0] is mult. by 1
+        // if right (direction=-1), temp[1] is mult. by 1 and temp[0] is mult. by -1
+        let row = (-1 * direction) * temp[1] + origin[0];
+        let col = (direction) * temp[0] + origin[1];
         // Collision checks
         if (row < 0 || row > MAX_ROWS
                 || col < 0 || col > MAX_COLS) {
@@ -357,40 +365,7 @@ function rotateLeft() {
     current_piece.coords = moved_piece;
     calculateCurrentPieceGhost();
     queueCurrentPieceDraw();
-}
 
-function rotateRight() {
-    if (current_piece.type == "O") return;
-    let origin = current_piece.origin;
-
-    let moved_piece = [];
-    for (let k in current_piece.coords) {
-        let temp = []
-        temp[0] = current_piece.coords[k][0] - origin[0];
-        temp[1] = current_piece.coords[k][1] - origin[1];
-        // -90 degree rotation matrix
-        //[0  1]
-        //[-1 0]
-        let row = temp[1] + origin[0];
-        let col = -1 * temp[0] + origin[1];
-        // Collision checks
-        if (row < 0 || row > MAX_ROWS
-                || col < 0 || col > MAX_COLS) {
-            // Rotation would colide with walls
-            return;
-        }
-        if (inactive_pieces[row][col] != EMPTY) {
-            // Rotation would collide with inactive piece
-            return;
-        }
-        moved_piece[k] = [row, col];
-    }
-
-    queueCurrentPieceClear();
-
-    current_piece.coords = moved_piece;
-    calculateCurrentPieceGhost();
-    queueCurrentPieceDraw();
 }
 
 function moveTetromino(roffset, coffset) {
