@@ -29,19 +29,19 @@ let gameLoopId;
 // next_coords - where to draw the piece when it's in the next piece box
 const TETROMINOES = [
     {name: "I", color: "#31C7EF", coords: [[1,3],[1,4],[1,5],[1,6]], 
-        origin: [1.5, 4.5], next_coords: [[3,10],[3,11],[3,12],[3,13]]},
+        origin: [1.5, 4.5], next_coords: [[3,11],[3,12],[3,13],[3,14]]},
     {name: "O", color: "#F7D308", coords: [[0,4],[0,5],[1,4],[1,5]], 
-        origin: [0.5, 4.5], next_coords: [[2,11],[2,12],[3,11],[3,12]]},
+        origin: [0.5, 4.5], next_coords: [[2,12],[2,13],[3,12],[3,13]]},
     {name: "T", color: "#AD4D9C", coords: [[1,4],[0,4],[1,3],[1,5]], 
-        origin: [1,4], next_coords: [[3,10],[3,11],[3,12],[2,11]]},
+        origin: [1,4], next_coords: [[3,11],[3,12],[3,13],[2,12]]},
     {name: "S", color: "#42B642", coords: [[1,4],[0,4],[0,5],[1,3]], 
-        origin: [1,4], next_coords: [[3,11],[2,11],[2,12],[3,10]]}, 
+        origin: [1,4], next_coords: [[3,12],[2,13],[2,14],[3,13]]}, 
     {name: "Z", color: "#EF2029", coords: [[1,4],[0,3],[0,4],[1,5]], 
-        origin: [1,4], next_coords: [[3,11],[2,10],[2,11],[3,12]]},
+        origin: [1,4], next_coords: [[3,12],[2,11],[2,12],[3,13]]},
     {name: "J", color: "#5A65AD", coords: [[1,4],[0,3],[1,3],[1,5]], 
-        origin: [1,4], next_coords: [[3,11],[2,10],[3,10],[3,12]]},
+        origin: [1,4], next_coords: [[3,12],[2,11],[3,11],[3,13]]},
     {name: "L", color: "#EF7921", coords: [[1,4],[0,5],[1,3],[1,5]], 
-        origin: [1,4], next_coords: [[3,11],[2,12],[3,10],[3,12]]}
+        origin: [1,4], next_coords: [[3,12],[2,13],[3,11],[3,13]]}
 ];
 
 const EMPTY = "#FFFFFF"
@@ -93,6 +93,7 @@ let score = {
 
 let key_hold_state = {
     soft_drop: false,
+    hard_drop: false,
     left: false,
     left_delay: 0,
     right: false,
@@ -105,6 +106,11 @@ window.onload = function() {
     canvas = document.getElementById("game");
     canvas.width = window.innerWidth - WINDOW_PADDING;
     canvas.height = window.innerHeight - WINDOW_PADDING;
+    while (boardHeight > canvas.height) {
+        GRID_PIXEL_SIZE -= 2;
+        boardHeight = start_pos[0] + GRID_PIXEL_SIZE * (MAX_ROWS - BUFFER_SIZE);
+        boardWidth = start_pos[1] + GRID_PIXEL_SIZE * MAX_COLS;
+    }
 
     //start_pos[0] = canvas.height / 4;
     //start_pos[1] = canvas.width / 2;
@@ -121,7 +127,7 @@ window.onload = function() {
     context = canvas.getContext("2d");
 
     drawGrid();
-    drawSidePanels();
+    //drawSidePanels();
 
     play();
 }
@@ -130,13 +136,20 @@ document.addEventListener('keydown', function(event) {
     // block input if in the middle of clearing 
     //if (current_piece.clearing) return;
     switch (event.keyCode) {
+        case 32:
+            // Space (Hold)
+
+            break;
         case 40:
             // Down (Soft Drop)
             key_hold_state.soft_drop = true;
             break;
         case 38:
             // UP
-            hardDrop();
+            if (!key_hold_state.hard_drop) {
+                hardDrop();
+                key_hold_state.hard_drop = true;
+            }
             break;
         case 37:
             //LEFT
@@ -178,6 +191,10 @@ document.addEventListener('keyup', function(event) {
         case 40:
             // DOWN
             key_hold_state.soft_drop = false;
+            break;
+        case 38:
+            // UP
+            key_hold_state.hard_drop = false;
             break;
         case 37:
             // LEFT
