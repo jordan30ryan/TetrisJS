@@ -70,6 +70,8 @@ let current_piece = {
     color: EMPTY,
 }
 
+let hold_piece_type = "";
+
 // Queue of pieces to be drawn or removed on the next tick
 // Formatted as coords [[][][][]] followed by the color to draw or EMPTY to clear
 let draw_queue = [];
@@ -138,7 +140,7 @@ document.addEventListener('keydown', function(event) {
     switch (event.keyCode) {
         case 32:
             // Space (Hold)
-
+            hold(current_piece);
             break;
         case 40:
             // Down (Soft Drop)
@@ -230,7 +232,6 @@ function nextTick() {
 
     // TODO: Improve performance of drawing text/numbers
     //drawScore();
-
     //drawTimer();
 
     // If there are lines to shift down and it's at least the tick
@@ -305,6 +306,7 @@ function spawnTetromino() {
     if (piece_bag.length < 2) extendBag();
 
     //clear_queue.push(TETROMINOES[piece_bag[0]].next_coords);
+    // TODO: Make draw queue not require two functions
     draw_queue.push(TETROMINOES[piece_bag[0]].next_coords);
     draw_queue.push(EMPTY);
 
@@ -318,16 +320,26 @@ function spawnTetromino() {
 
     // Set current piece properties based on which tetromino is being spawned
     let tetromino = TETROMINOES[this_piece_index];
+    setCurrentPiece(tetromino);
+
+    //current_piece.coords = tetromino.coords;
+    //current_piece.origin = new Array(tetromino.origin[0], tetromino.origin[1]);
+    //current_piece.color = tetromino.color;
+    //current_piece.type = tetromino.name;
+    //current_piece.active = true;
+
+    calculateCurrentPieceGhost()
+
+    queueCurrentPieceDraw();
+}
+
+function setCurrentPiece(tetromino) {
     current_piece.coords = tetromino.coords;
     // TODO: what to use here?
     current_piece.origin = new Array(tetromino.origin[0], tetromino.origin[1]);
     current_piece.color = tetromino.color;
     current_piece.type = tetromino.name;
     current_piece.active = true;
-
-    calculateCurrentPieceGhost()
-
-    queueCurrentPieceDraw();
 }
 
 function extendBag() {
@@ -421,6 +433,26 @@ function moveTetromino(roffset, coffset) {
 
     current_piece.coords = moved_piece;
     calculateCurrentPieceGhost();
+    queueCurrentPieceDraw();
+}
+
+function hold(piece) {
+    draw_queue.push(current_piece.coords);
+    draw_queue.push(EMPTY);
+    draw_queue.push(current_piece.ghost_coords);
+    draw_queue.push(EMPTY);
+
+    if (hold_piece_type == "") {
+        hold_piece_type = current_piece.type;
+        spawnTetromino();
+    }
+    else {
+        let tetromino = TETROMINOES.filter(function(obj){return obj.name == hold_piece_type;})[0]
+        hold_piece_type = current_piece.type;
+        setCurrentPiece(tetromino);
+    }
+
+    calculateCurrentPieceGhost()
     queueCurrentPieceDraw();
 }
 
