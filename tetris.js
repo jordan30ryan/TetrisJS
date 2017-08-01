@@ -1,4 +1,5 @@
 /*Canvas Variables------------------------------------------------------------*/
+
 let canvas;
 let context;
 
@@ -17,7 +18,7 @@ let boardWidth = start_pos[1] + GRID_PIXEL_SIZE * MAX_COLS;
 
 /*Game Variables--------------------------------------------------------------*/
 
-// Time in ms between each tick 
+// Period in ms between each tick 
 // 16.66ms - 60Hz
 const TICK_DELAY = 16.66;
 let tick = 1;
@@ -57,6 +58,9 @@ const MOVE_HOLD_INITIAL_DELAY = 9;
 //  (After the MOVE_HOLD_INITIAL_DELAY is over) 
 const MOVE_HOLD_DELAY = 2;
 
+const HOLD_POS_ROW_OFFSET = 20;
+const HOLD_POS_COL_OFFSET = 8;
+
 // 2d array representing the inactive pieces with the colors of every square
 let inactive_pieces = [];
 
@@ -69,6 +73,10 @@ let current_piece = {
     ghost_coords: [],
     color: EMPTY,
 }
+
+let hold_piece_type = "";
+let hold_piece_used = false;
+let hold_piece_preview = [];
 
 // Queue of pieces to be drawn or removed on the next tick
 // Formatted as coords [[][][][]] followed by the color to draw or EMPTY to clear
@@ -85,7 +93,6 @@ let CLEAR_TICK_DELAY = 10;
 let piece_bag = [];
 
 let time_elapsed = 0;	// ms
-
 
 let score = {
     lines_cleared: 0
@@ -138,7 +145,7 @@ document.addEventListener('keydown', function(event) {
     switch (event.keyCode) {
         case 32:
             // Space (Hold)
-
+            hold(current_piece);
             break;
         case 40:
             // Down (Soft Drop)
@@ -229,9 +236,8 @@ function nextTick() {
     drawPieces();
 
     // TODO: Improve performance of drawing text/numbers
-    //drawScore();
-
-    //drawTimer();
+    drawScore();
+    drawTimer();
 
     // If there are lines to shift down and it's at least the tick
     //	at which lines drop
@@ -250,9 +256,6 @@ function nextTick() {
     else {
         spawnTetromino();
     }
-
-    // Draw according to draw_queue
-    //drawPieces();
 }
 
 // Calculate ghost position
@@ -302,9 +305,13 @@ function moveActiveTetromino() {
 }
 
 function spawnTetromino() {
+    // One use for the hold function because this is a new piece
+    hold_piece_used = false;
+    
     if (piece_bag.length < 2) extendBag();
 
     //clear_queue.push(TETROMINOES[piece_bag[0]].next_coords);
+    // TODO: Make draw queue not require two functions
     draw_queue.push(TETROMINOES[piece_bag[0]].next_coords);
     draw_queue.push(EMPTY);
 
@@ -318,16 +325,26 @@ function spawnTetromino() {
 
     // Set current piece properties based on which tetromino is being spawned
     let tetromino = TETROMINOES[this_piece_index];
+    setCurrentPiece(tetromino);
+
+    //current_piece.coords = tetromino.coords;
+    //current_piece.origin = new Array(tetromino.origin[0], tetromino.origin[1]);
+    //current_piece.color = tetromino.color;
+    //current_piece.type = tetromino.name;
+    //current_piece.active = true;
+
+    calculateCurrentPieceGhost()
+
+    queueCurrentPieceDraw();
+}
+
+function setCurrentPiece(tetromino) {
     current_piece.coords = tetromino.coords;
     // TODO: what to use here?
     current_piece.origin = new Array(tetromino.origin[0], tetromino.origin[1]);
     current_piece.color = tetromino.color;
     current_piece.type = tetromino.name;
     current_piece.active = true;
-
-    calculateCurrentPieceGhost()
-
-    queueCurrentPieceDraw();
 }
 
 function extendBag() {
@@ -422,6 +439,44 @@ function moveTetromino(roffset, coffset) {
     current_piece.coords = moved_piece;
     calculateCurrentPieceGhost();
     queueCurrentPieceDraw();
+}
+
+function hold(piece) {
+    // Already held a piece; can't hold again until next piece spawn
+    if (hold_piece_used) return;
+    
+    // Clear old current piece and its ghost
+    queueCurrentPieceClear();
+
+    // Clear old hold piece preview 
+    queueHoldPieceClear();
+
+    if (hold_piece_type == "") {
+        // No hold piece; hold and spawn new piece
+        hold_piece_type = current_piece.type;
+        spawnTetromino();
+    }
+    else {
+        // Existing hold piece; hold and get the held piece type to spawn
+        let tetromino = TETROMINOES.filter(function(obj){return obj.name == hold_piece_type;})[0];
+        hold_piece_type = current_piece.type;
+        setCurrentPiece(tetromino);
+    }
+
+    // Draw current piece and its ghost
+    calculateCurrentPieceGhost()
+    queueCurrentPieceDraw();
+
+    // Draw hold piece preview
+    hold_piece_preview = [];
+    held_tetromino = TETROMINOES.filter(function(obj){return obj.name == hold_piece_type;})[0];
+    for (k in held_tetromino.next_coords) {
+        hold_piece_preview.push([held_tetromino.coords[k][0] + HOLD_POS_ROW_OFFSET, 
+                          held_tetromino.coords[k][1] + HOLD_POS_COL_OFFSET]);
+    }
+    queueHoldPieceDraw();
+
+    hold_piece_used = true;
 }
 
 // Makes current piece inactive
@@ -565,6 +620,17 @@ function queueCurrentPieceClear() {
     draw_queue.push(current_piece.coords);
     draw_queue.push(EMPTY);
     draw_queue.push(current_piece.ghost_coords);
+    draw_queue.push(EMPTY);
+}
+
+function queueHoldPieceDraw() {
+    draw_queue.push(hold_piece_preview);
+    let color = TETROMINOES.filter(function(obj){return obj.name == hold_piece_type;})[0].color;
+    draw_queue.push(color);
+}
+
+function queueHoldPieceClear() {
+    draw_queue.push(hold_piece_preview);
     draw_queue.push(EMPTY);
 }
 
