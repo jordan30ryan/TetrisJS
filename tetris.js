@@ -49,7 +49,7 @@ const EMPTY = "#FFFFFF"
 const GHOST_COLOR = "#CCCCCC";
 
 // Number of ticks before a piece moves down a row
-const DEFAULT_FALL_RATE = 60;
+let DEFAULT_FALL_RATE = 60;
 const SOFT_FALL_RATE = 3;
 
 // Number of ticks before moving to the left or right when holding down
@@ -227,6 +227,8 @@ function play() {
 
 function nextTick() {
     tick++;
+
+    DEFAULT_FALL_RATE = 60 - score.lines_cleared;
 
     // Decrement movement hold delays
     if (key_hold_state.left) key_hold_state.left_delay--;
