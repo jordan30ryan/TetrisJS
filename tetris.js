@@ -183,12 +183,12 @@ document.addEventListener('keydown', function(event) {
         case 90:
             // Z
             // Rotate left
-            rotate(1);
+            rotate(1, true);
             break;
         case 88:
             // X
             // Rotate right
-            rotate(-1);
+            rotate(-1, true);
             break;
     }
 });
@@ -361,7 +361,9 @@ function extendBag() {
 
 // Rotation of piece about piece's origin. 
 // Direction: 1 for right, -1 for left
-function rotate(direction) {
+// attemptWallKick: true if should try wall kick, false otherwise
+// returns: true if rotation was successful, false otherwise
+function rotate(direction, attemptWallKick) {
     // O block does not rotate, don't bother with calculations
     if (current_piece.type == "O") return;
     let origin = current_piece.origin;
@@ -383,14 +385,28 @@ function rotate(direction) {
         let col = (direction) * temp[0] + origin[1];
         // Collision checks
         if (row < 0 || row > MAX_ROWS
-                || col < 0 || col > MAX_COLS) {
+                || col < 0 || col > MAX_COLS 
+                || inactive_pieces[row][col] != EMPTY) {
+
             // Rotation would colide with walls
-            return;
+            // Or would collide with inactive piece
+
+            if (attemptWallKick) {
+                // Move to right one and retry
+                moveTetromino(0, 1);
+                if (!rotate(direction, false)) {
+                    // If that doesn't work, move to left one and retry
+                    moveTetromino(0, -1);
+                    return rotate(direction, false);
+                } else return true; 
+            } else {
+                return false;
+            }
         }
-        if (inactive_pieces[row][col] != EMPTY) {
-            // Rotation would collide with inactive piece
-            return;
-        }
+        //if (inactive_pieces[row][col] != EMPTY) {
+        //    // Rotation would collide with inactive piece
+        //    return;
+        //}
         moved_piece[k] = [Math.floor(row), Math.floor(col)];
     }
 
@@ -400,6 +416,7 @@ function rotate(direction) {
     calculateCurrentPieceGhost();
     queueCurrentPieceDraw();
 
+    return true;
 }
 
 function moveTetromino(roffset, coffset) {
