@@ -23,7 +23,7 @@ let boardWidth = start_pos[1] + GRID_PIXEL_SIZE * MAX_COLS;
 const TICK_DELAY = 16.66;
 let tick = 1;
 
-let gameLoopId;
+let playing = true;
 
 // coords - where to spawn a new piece
 // origin - coordinates about which the piece rotates
@@ -136,6 +136,7 @@ window.onload = function() {
     drawGrid();
     //drawSidePanels();
 
+    playing = true
     play();
 }
 
@@ -221,11 +222,17 @@ document.addEventListener('keyup', function(event) {
 
 /*Game Functions--------------------------------------------------------------*/
 
-function play() {
-    gameLoopId = setInterval(nextTick, TICK_DELAY);
-}
+window.requestAnimFrame = (function(callback) {
+    return window.requestAnimationFrame || window.webkitRequestAnimationFrame || window.mozRequestAnimationFrame || window.oRequestAnimationFrame || window.msRequestAnimationFrame ||
+    function(callback) {
+        window.setTimeout(callback, 1000 / 60);
+    };
+})();
 
-function nextTick() {
+function play() {
+    // request new frame to keep the animation going
+    if (playing) requestAnimFrame( play );
+
     tick++;
 
     // Decrement movement hold delays
@@ -509,7 +516,7 @@ function deactivatePiece() {
     checkRows(unique_rows);
 
     if (game_over) {
-        clearInterval(gameLoopId);
+        playing = false;
         alert("Game Over");
     }
 }
