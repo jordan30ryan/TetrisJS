@@ -282,9 +282,11 @@ function calculateCurrentPieceGhost() {
 }
 
 function hardDrop() {
-    queueCurrentPieceClear();
-    current_piece.coords = current_piece.ghost_coords;
-    deactivatePiece();
+    if (current_piece.active && !current_piece.clearing) {
+        queueCurrentPieceClear();
+        current_piece.coords = current_piece.ghost_coords;
+        deactivatePiece();
+    }
 }
 
 function moveActiveTetromino() {
