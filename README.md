@@ -1,5 +1,5 @@
 # TetrisJS
-https://jordan-ross.github.io/TetrisJS/
+https://jordanross.github.io/TetrisJS/
 
 ## TODO
 - Lock timer
